@@ -1,0 +1,27 @@
+function fp_S1_json_inventory_tests(){
+# These can not be added to the array in fp_S1 as they are functions that supply parameters and so this wrapper function calls them.
+
+# prefix all these variables with 'vj_'.
+# - the name denotes these as project variables that originated in a json file.
+# - their values should not ever be re-assigned and should be considered static. 
+# - a copy of the variable is made swapping the 'vj_' with 'vp_'. Any variable re-assignments should be made to this copy.
+# - so if 'vj_project_flags_jenkins' is set to false in the file but changed at runtime with a flag, its vp_ version should be referenced.
+
+# ---------------------------------------------------------------
+# [1] Process the inventory and test json files. 
+
+printf "%b\n" "${yl}--> Info - ${rs}Processing the inventory json file.";
+f_json_recurse "$(cat ${vp_help_flags_inventory})" "vj";
+printf "%b\n" "${yl}--> Info - ${rs}Processing the tests json file.";
+f_json_recurse "$(cat ${vp_help_flags_tests})" "vj";
+
+# ---------------------------------------------------------------
+# [2] Check tests and inventory match to the same environment. 
+
+if [[ "${vj_inventory_environment}" != "${vj_tests_environment}" ]]; then
+    f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";
+    f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "2";
+else
+    printf "%b\n" "${yl}--> Info - ${rs}Both json files reference the same environment (${vj_inventory_environment}).";
+fi;
+};

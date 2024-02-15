@@ -1,0 +1,61 @@
+function fp_multipids_display_fail(){
+
+local count;
+local stageid;
+local source_hostname;
+local source_pubIp;
+local source_test;
+local source_interface;
+local json_code;
+local message;
+local hint;
+
+${spacer};
+printf "%b\n" "${rdB}--> Stage ${vp_stage_number} failed pids${rs}..";
+
+count=0;
+for pid_stage in "${!A_stage_pid_fails[@]}"
+do
+    pid="$(echo ${pid_stage}     | cut -d '_' -f1)";
+    stageid="$(echo ${pid_stage} | cut -d '_' -f2)";
+    if [[ "${vp_stage_number}" == "${stageid}" ]];then 
+        ((count++));
+    fi;
+done;
+
+if [[ ${#A_stage_pid_fails[@]} -ne 0 ]] && [[ ${count} -gt 0 ]];then
+
+    for pid_stage in "${!A_stage_pid_fails[@]}"
+    do
+        pid="$(echo ${pid_stage}     | cut -d '_' -f1)";
+        stageid="$(echo ${pid_stage} | cut -d '_' -f2)";
+        if [[ "${vp_stage_number}" == "${stageid}" ]];then    
+            source_hostname="$(echo ${A_stage_pid_details[$pid_stage]}   | cut -d ',' -f1)";
+            source_domain="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f2)";
+            source_pubIp="$(echo ${A_stage_pid_details[$pid_stage]}      | cut -d ',' -f3)";
+            source_interface="$(echo ${A_stage_pid_details[$pid_stage]}  | cut -d ',' -f4)";
+            source_gateway="$(echo ${A_stage_pid_details[$pid_stage]}    | cut -d ',' -f5)";
+            source_parent="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f6)";
+
+            json_code="$(echo vj_${A_stage_pid_fails[$pid_stage]}  | cut -d ',' -f1)";
+            message="$(echo ${A_stage_pid_fails[$pid_stage]}       | cut -d ',' -f2)";
+            hint="$(echo ${A_stage_pid_fails[$pid_stage]}          | cut -d ',' -f3)";
+            
+            # Check if hint is a variable - if so use '!' for indirection to resolve to value.
+            if [[ ${hint} == "vf_"* ]] || [[ ${hint} == "vp_"* ]] || [[ ${hint} == "vj_"* ]]; then hint=${!hint}; fi;
+
+            ${dashLine};
+            printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";
+            printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";
+            printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";
+            printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";
+            printf "%b\n" "${yl}--> Info - ${rs}error.json:          ${json_code}";
+            printf "%b\n" "${yl}--> Info - ${rs}Message:             ${message}";
+            printf "%b\n" "${yl}--> Info - ${rs}Hint:                ${hint}";
+        fi;
+    done;
+
+else
+    printf "%b\n" "${yl}--> Info - ${rs}All pids were successful!";
+fi;
+};

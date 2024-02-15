@@ -1,0 +1,23 @@
+function fp_multipids_display_details_S3(){
+
+printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}";   
+for pid_stage in "${!A_stage_pid_details[@]}"
+do
+    pid="$(echo ${pid_stage}     | cut -d '_' -f1)";
+    stageid="$(echo ${pid_stage} | cut -d '_' -f2)";
+    if [[ "${vp_stage_number}" == "${stageid}" ]];then    
+        source_hostname="$(echo ${A_stage_pid_details[$pid_stage]}   | cut -d ',' -f1)";
+        source_domain="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f2)";
+        source_pubIp="$(echo ${A_stage_pid_details[$pid_stage]}      | cut -d ',' -f3)";
+        source_interface="$(echo ${A_stage_pid_details[$pid_stage]}  | cut -d ',' -f4)";
+        source_gateway="$(echo ${A_stage_pid_details[$pid_stage]}    | cut -d ',' -f5)";
+        source_parent="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f6)";
+
+        ${dashLine};
+        printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";
+        printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";
+    fi;
+done;
+${spacer}; 
+printf "%b\n" "${cyB}--> Results to follow..${rs}";
+};

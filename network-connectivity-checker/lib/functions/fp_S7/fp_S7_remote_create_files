@@ -1,0 +1,56 @@
+function fp_S7_remote_create_files(){
+
+# About:
+# - This function create the files used by prometheus + test file.
+# - It populates the bespoke test script that is called by the cronjob.
+# - It writes a results.csv on each VM - these are subsequently collected and brought back to the bash-x origin server.
+# - It is also configurable so a dynamic cronjob script is created for each VM.
+#   - i.e. tests can be triggered by cronjob and not running the Jenkins pipeline and using prometheus, for display in Grafana.  
+
+# Usage:
+# fp_S5_api_project_remote_execute;
+# - No passed parameters.
+
+# ---------------------------------------------------------------
+# [1] Create cronjob.
+
+if [[ "${vp_help_flags_cronjob}" == "false" ]] && [[ "${vp_help_flags_cronjobremove}" == "false" ]]; then 
+
+    # Dont do anything but echo to log.
+    echo "INFO: cronjob script will not be re-created or removed.";
+
+elif [[ "${vp_help_flags_cronjob}" == "false" ]] && [[ "${vp_help_flags_cronjobremove}" == "true" ]]; then 
+    
+    # Remove any existing cronjob script and prometheus export file.
+    # - Only if all the paths are not empty!! 
+    if [[ "${vp_path_file_cronjob}" != "" ]] && [[ "${vp_path_file_prometheus}" != "" ]] && [[ "${vp_path_file_prometheus_sping}" != "" ]];then
+        rm -rf ${vp_path_file_cronjob};
+        rm -rf ${vp_path_file_prometheus};
+        rm -rf ${vp_path_file_prometheus_sping};
+        echo "INFO: cronjob script has been removed.";
+    fi;
+
+else
+
+    # Create temp network connectivity script for cronjob.
+    mkdir -p "${vp_help_flags_cspath}";
+    touch ${vp_path_file_cronjob}.tmp;
+    chmod +x ${vp_path_file_cronjob}.tmp;
+
+    # Create temp prometheus file for node exporter.
+    mkdir -p "${vp_help_flags_prompath}";
+    touch ${vp_path_file_prometheus}.prom.tmp;
+    chmod +rw ${vp_path_file_prometheus}.prom.tmp;
+
+    # Create temp prometheus for sping stats file for node exporter.
+    touch ${vp_path_file_prometheus_sping}.prom.tmp;
+    chmod +rw ${vp_path_file_prometheus_sping}.prom.tmp;
+
+    # Generate the cronjob script.
+    fp_S5_remote_write_cronjob;
+
+    # Replace/create the cronjob script.
+    mv ${vp_path_file_cronjob}.tmp ${vp_path_file_cronjob};
+    chmod +x ${vp_path_file_cronjob};
+fi;
+};

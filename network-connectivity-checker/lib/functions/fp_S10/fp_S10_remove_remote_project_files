@@ -1,0 +1,6 @@
+function fp_S10_remove_remote_project_files(){
+
+# Remove the prometheus file and checker script from the remote VM.
+f_ssh_cmd "[ -f ${vp_path_file_prometheus} ]    && rm -f ${vp_path_file_prometheus}"    "1";
+f_ssh_cmd "[ -f ${vp_path_file_cronjob} ] && rm -f ${vp_path_file_cronjob}" "1";
+};

@@ -1,0 +1,53 @@
+function fp_project_custom_flagtype(){
+
+# About:
+# - Processes the custom flag type that is defined in the project's help.json
+# - Project developers have full control of how to handle their flags.
+# - Here add additional checks and processing based on the flag's 'type' field.
+
+# Usage:
+# fp_project_custom_flagtype "custom_binary"  "vp_help_flags_disinfect" "true";
+# fp_project_custom_flagtype "custom_soup"    "vp_help_flags_makesoup"  "tomato";
+# fp_project_custom_flagtype "custom_display" "vp_help_flags_funky"     "funky";
+
+# ---------------------------------------------------------------
+# [1] Declare local variables and handle passed params.
+
+local custom_type;
+local flag_id;
+local flag_value;
+
+custom_type="${1}";
+flag_id="${2}";
+flag_value="${3}";
+
+# ---------------------------------------------------------------
+# [2]  Handle the different custom types with this case statement.
+
+case "${custom_type}" in
+
+# ---------------------------------------------------------------
+"custom_binary"*)
+
+    # Process this type logic.
+    echo "Checking if binary value is well formed and necessary conditions allow.";
+
+    ;;
+
+# ---------------------------------------------------------------
+"custom_soup"*)
+
+    # Process this type logic.
+    echo "Checking if soup ingredients are available.";
+
+    ;;
+# ---------------------------------------------------------------
+"custom_that"*)
+
+    # Process this type logic.
+    echo "Checking if display is enabled for this type.";
+    
+    ;;
+
+esac;
+};

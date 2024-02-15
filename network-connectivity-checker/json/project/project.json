@@ -1,0 +1,144 @@
+{
+    "project":{
+        "name":                     "network-connectivity-checker",
+        "description":              "In Json, define environments and the connectivity tests to run from them.",
+        "version":                  "1.0.1",
+        "repo":                     "https://git.swisscom.com/projects/CSL/repos/bash-x-projects/browse/network-connectivity-checker",
+        "dependencies":{
+            "make":{
+                "about":            "Required to generate output of project. A local or remote requirement depending on where project computation is performed.",
+                "java":             ">15.0.0"
+            },
+            "execute":{
+                "about":            "Required to run the output of project. E.g. if output of project is a script to be run, then these packages are required.",
+                "awk":              "*0.0.0",
+                "bash":             ">4.3.0",
+                "docker":           ">23.0.0",
+                "ip":               "*0.0.0",
+                "ping":             "*0.0.0",
+                "netcat":           ">0.5.0",
+                "timeout":          "*0.0.0"
+            }
+        },
+        "stages":{
+            "s1":{
+                "title":            "Process json and create the schedule of tests.",
+                "concurrent":       "false",
+                "concurrentMsg":    "",
+                "t1":{
+                    "title":        "Process the inventory and tests json.",
+                    "f1":           "fp_S1_json_inventory_tests"
+                },
+                "t2":{
+                    "title":        "Create the test schedule.",
+                    "f1":           "fp_S1_array_create_tests_fromto",
+                    "f2":           "fp_S1_array_create_tests_to_all"
+                }
+            },
+            "s2":{
+                "title":            "Display test stats from source to target servers.",
+                "concurrent":       "false",
+                "concurrentMsg":    "",
+                "t1":{
+                    "title":        "Display stats and test table.",
+                    "f1":           "fp_S2_display_tests_inventory_stats",
+                    "f2":           "fp_S2_display_array_tests_to_all"
+                }
+            },
+            "s3":{
+                "title":            "Locally create the network-checker scripts.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Creating local network scripts for each source server.",
+                "t1":{
+                    "title":        "Write the tailored server scripts.",
+                    "f1":           "fp_S3_write_script_loop_tests"
+                }
+            },
+            "s4":{
+                "title":            "Check remote servers are ready.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Check each server for connectivity and write permission",
+                "t1":{
+                    "title":        "Check each source server for write permission.",
+                    "f1":           "f_remote_connectivity_permissions"
+                }
+            },
+            "s5":{
+                "title":            "Distribute the network-checker scripts.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Copy each tailored script to its source server",
+                "t1":{
+                    "title":        "Copy script to each source server.",
+                    "f1":           "fp_S5_copy_checker_script"
+                }
+            },
+            "s6":{
+                "title":            "Distribute the framework and project.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Copy framework and project to each source server",
+                "t1":{
+                    "title":        "Copy framework to each source server.",
+                    "f1":           "f_remote_copy_framework"
+                },
+                "t2":{
+                    "title":        "Copy project to each source server.",
+                    "f1":           "f_remote_copy_project"
+                }
+            },
+            "s7":{
+                "title":            "Remotely create network-checker scripts.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Generate the network-checker script on each remote server",
+                "t1":{
+                    "title":        "Initiate remote function execution on each source server.",
+                    "f1":           "f_remote_project_start"
+                },
+                "remote1":{
+                    "title":            "Create testing script (remote):",
+                    "concurrent":       "false",
+                    "concurrentMsg":    "",
+                    "t1":{
+                        "title":        "Process the tests and inventory json.",
+                        "f1":           "fp_S1_json_recurse_wrapper"
+                    },
+                    "t2":{
+                        "title":        "Calculate the test schedule for this source server.",
+                        "f1":           "fp_S1_array_create_tests_fromto",
+                        "f2":           "fp_S1_array_create_tests_to_all"
+                    },
+                    "t3":{
+                        "title":        "Write the bespoke source server scripts.",
+                        "f1":           "fp_S3_write_script_herdoc"
+                    }
+                }
+            },
+            "s8":{
+                "title":            "Retrieve logs from each remote server.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Copy remote logs to this server",
+                "t1":{
+                    "title":        "Retrieve logs.",
+                    "f1":           "f_remote_fetch_logs"
+                }
+            },
+            "s9":{
+                "title":            "Tidy framework and projects folders from each remote server.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Safely delete remote framework folder",
+                "t1":{
+                    "title":        "Remove the framework and projects folder.",
+                    "f1":           "f_remote_remove_framework_project"
+                }
+            },
+            "s10":{
+                "title":            "Tidy project files from each remote server.",
+                "concurrent":       "true",
+                "concurrentMsg":    "Safely delete remote project files",
+                "t1":{
+                    "title":        "Remove the checkerscript and prometheus files.",
+                    "f1":           "fp_S10_remove_remote_project_files"
+                }
+            }
+        }
+    }
+}

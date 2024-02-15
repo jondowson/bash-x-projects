@@ -1,0 +1,58 @@
+function fp_project_start(){ 
+
+# About:
+# - This function is the starting point for the project. 
+# - It is still part of stage 0 (framework and project initiation).
+# - It runs checks, assisgns variables and finally calls the stages with their tasks and functions that make up the project.
+# - Any changes to the runtime ordering / execution of stage functions is handled in the file functions/fp_project_custom_runorder 
+
+# ---------------------------------------------------------------
+# [1] For any project paths defined in help.json or passed as flags.
+# - remove occurences of double forward slashes.
+# - ensure folder paths end with a forward slash.
+
+f_arrays_paths_clean_project;  
+
+# ---------------------------------------------------------------
+# [2] Declare all project variables that can be set this early.
+
+fp_S0_set_vars;
+
+# ---------------------------------------------------------------
+# [3] Perform 'Stage 0' checks specified in the errors.json.
+
+f_check_project_checktypes;
+
+# TODO - add the dependency checks
+#f_dependency_step1 "false";
+#echo ${vf_metadata_string} | jq '.project_dependencies.execute.bash.meet_requirement';
+
+# ---------------------------------------------------------------
+# [4] Create and clear local logs.
+
+# Create timestamped log folders if they do not already exist.
+fp_S0_logs_create;
+
+# Remove local log folders based on the framework flag '--LOGLIFEMINS'.
+f_utils_logs_rotate "folder_writetime" "${vp_project_rootpath}input_output/" "${vp_help_flags_loglifemins}";
+
+# From this point forwards write all screen output to the local file 'console.log'.
+# Any local subprocesses will also be written to log.
+# All logs go to a timestamped folder under the project folders input_output folder.
+exec > >(tee -a "${vp_path_folder_timestamp_tests_logs}console.log");
+
+# ---------------------------------------------------------------
+# [5] Display to screen the project banner.
+
+fp_S0_ui_banner;
+
+# ---------------------------------------------------------------
+# [6] Call the loop to run each stage defined in 'project.json'. 
+
+f_stages_loop;
+
+# ---------------------------------------------------------------
+# [7] Call the final stage to display a summary and exit.
+
+f_stages_functions_final;
+};

@@ -1,0 +1,61 @@
+function fp_project_custom_json(){
+
+# About:
+# - This function is called by the framework function 'f_json_recurse' to process any project specific json files.
+# - 'f_json_recurse' calls this function in a CASE statement for any match other than predefined framework json files. 
+# - These are the predefined json files with their respective match patterns. 
+#   - 'framework.json', 'project.json', 'arrays.json','help.json' and 'errors.json'.
+#   - 'vj_framework', 'vj_project', 'vj_arrays', 'vj_help' and 'vj_errors'.
+# - So these protected names are not available for the project specific json handled below. 
+
+# ---------------------------------------------------------------
+# [1] Declare local variables.
+
+local key;
+local value;
+
+# ---------------------------------------------------------------
+# [2] Assign the key and value params passed by 'f_json_recurse'. 
+
+key="${1}";
+value="${2}";
+
+# When a json file is processed, two variables a created.
+# One is prepended with 'vj_' and a copy of this is prepended with 'vp_'.
+# The 'vj_' version is a representation of what is in the json file and should never have its value reassigned.
+# The 'vp_' value can be reassigned by say the presence of a passed flag or if a certain condition is met.
+# As such the 'vp_' version of the variable should be the one that is referenced in downstrem logic, unless the original json value is specifically required.
+
+# ---------------------------------------------------------------
+# [3] Select the project arrays to populate based on the key. 
+
+case "${key}" in
+
+  # ---------------------------------------------------------------
+  # These matches are reserved and unavailable!
+  
+  # vj_framework*)
+  # vj_project*)
+  # vj_arrays*) 
+  # vj_help*) 
+  # vj_errors*)
+
+  # ---------------------------------------------------------------
+  "vj_tests"*)
+
+    # Add it also to this specific project array.
+    A_variables_tests["${key}"]="${value}";
+
+    # Declare as bash variable and add to array of all variables: 
+    # - 'A_variables_all'
+    f_arrays_set_var "${key}" "${value}";
+    
+    # Remove the prefix 'vj_' and add the prefix 'vp_'.
+    key=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${key}" "_");
+    
+    # Declare as bash variable and add to array of all project variables: 
+    # - 'A_project_vars'
+    f_arrays_set_var "vp_${key}" "${value}";;
+
+esac;
+};

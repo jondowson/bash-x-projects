@@ -1,0 +1,209 @@
+function fp_S2_display_array_tests_to_all(){
+
+# About:
+# - Display details of each test from each source server.
+# - Also display by source server the number of tests by interface card.
+
+# Usage:
+# fp_S2_display_array_tests_to_all;
+# - No passed parameters.
+
+# ---------------------------------------------------------------
+# [1] Declare these variables with local scope. 
+
+local source_domain;
+local source_pubIp;
+local source_interface;
+local source_gateway;
+local source_parent;
+local testcase_description;
+local testcase_test;
+local testcase_type;
+local testcase_direction;
+local testcase_cfilter;
+local target_hostname;
+local target_domain;
+local target_pubIp;
+local target_interface;
+local target_gateway;
+local target_parent;
+local test_count_per_interface_card;
+local test_count;
+local row_count;
+local unique_test_id;
+local server_test_count;
+local source;
+local target;
+local test;
+
+# ---------------------------------------------------------------
+# [2] Assign initial values. 
+
+test_count_per_interface_card=0;
+test_count=0;
+row_count=1;
+unique_test_id="0";
+
+# ---------------------------------------------------------------
+# [3] Display stats table. 
+${spacer};
+printf "%b\n"   "${yl}--> Info - ${rs}Making table of all tests, please wait..";
+${spacer};
+
+# ---------------------------------------------------------------
+# [4] Display tests table header row. 
+
+printf '%s\t %-10s\t %-30s\t %-33s\t %-50s\t %s%s\n' "${bold}#" "${cyB}S-interface" "${ylB}T-interface" "${cyB}Source" "${ylB}Target" "${rs}Tests";
+printf '%s\n' "==================================================================================================================================================";
+
+# ---------------------------------------------------------------
+# [5] Populate the display arrays of all tests by source server. 
+
+# Loop through the array of source servers.
+for i in "${a_source_servers_sorted[@]}"
+do
+  # Assign this loop count to zero for each source server.
+  server_test_count="0";
+
+  # Loop through the array of all tests.
+  for j in "${!A_tests_to_all[@]}"
+  do
+    # Grab source server info.
+    source_hostname="$(echo               ${A_tests_to_all[$j]} | cut -d ',' -f1)";
+
+    # Only process if this inner loop matches the outer loop.
+    if [[ "${i}" == "${source_hostname}" ]];then
+
+      source_domain="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f2)";
+      source_pubIp="$(echo              ${A_tests_to_all[$j]} | cut -d ',' -f3)";
+      source_interface="$(echo          ${A_tests_to_all[$j]} | cut -d ',' -f4)";
+      source_gateway="$(echo            ${A_tests_to_all[$j]} | cut -d ',' -f5)";
+      source_parent="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f6)";
+      testcase_description="$(echo      ${A_tests_to_all[$j]} | cut -d ',' -f7)";
+      testcase_test="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f8)";
+      testcase_type="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f9)";
+      testcase_direction="$(echo        ${A_tests_to_all[$j]} | cut -d ',' -f10)";
+      testcase_cfilter_type="$(echo     ${A_tests_to_all[$j]} | cut -d ',' -f11)";
+      testcase_cfilter_strategy="$(echo ${A_tests_to_all[$j]} | cut -d ',' -f12)";
+      testcase_cfilter_grepon="$(echo   ${A_tests_to_all[$j]} | cut -d ',' -f13)";
+      target_hostname="$(echo           ${A_tests_to_all[$j]} | cut -d ',' -f14)";
+      target_domain="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f15)";
+      target_pubIp="$(echo              ${A_tests_to_all[$j]} | cut -d ',' -f16)";
+      target_interface="$(echo          ${A_tests_to_all[$j]} | cut -d ',' -f17)";
+      target_gateway="$(echo            ${A_tests_to_all[$j]} | cut -d ',' -f18)";
+      target_parent="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f19)";
+
+      # Full FQDN vars used in table rows. 
+      source="${source_hostname}${source_domain}";
+      target="${target_hostname}${target_domain}";
+
+      # Calculate number of tests per row from the presence of semicolons.
+      tests_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");
+      
+      # Multiple tests.
+      if [[ "${tests_semicolon_count}" -gt 0 ]];then 
+      
+        # Incremement the semicolon count.
+        test_count=$((tests_semicolon_count+1));
+
+        # Loop through semi colon separated tests.
+        for x in $(seq 1 ${test_count})
+        do
+          test="$(echo ${testcase_test} | cut -d ';' -f${x})";
+          A_servers_tests["${i},${unique_test_id}"]="${source_hostname},${source_domain},${source_interface},${target_hostname},${target_domain},${target_interface},${test}";
+          ((unique_test_id++));
+        done;
+
+      # Single test.
+      else
+      
+        test_count=1;
+        A_servers_tests["${i},${unique_test_id}"]="${source_hostname},${source_domain},${source_interface},${target_hostname},${target_domain},${target_interface},${testcase_test}";
+        ((unique_test_id++));
+
+      fi;
+
+      # The count of all tests per server.
+      server_test_count=$((server_test_count+test_count));
+      A_count_per_server[$i]="${server_test_count}";
+    
+      # Count tests per interface card for each source server and add to array.
+      if [[ "${A_server_interface[${source_hostname},${source_interface}]}" == "" ]];then 
+        test_count_per_interface_card=${test_count};
+      else
+        test_count_per_interface_card=$((${A_server_interface[${source_hostname},${source_interface}]}+test_count));
+      fi;
+      A_server_interface["${source_hostname},${source_interface}"]="${test_count_per_interface_card}";
+    fi;
+  done;
+done;
+
+# ---------------------------------------------------------------
+# [6] Display tests table of all tests by source server. 
+
+# Loop through the array of source servers.
+for i in "${a_source_servers_sorted[@]}"
+do
+
+  for j in "${!A_servers_tests[@]}"
+  do 
+
+    # Grab source server info.
+    source_hostname="$(echo  ${A_servers_tests[$j]} | cut -d ',' -f1)";
+
+    # Only process if this inner loop matches the outer loop.
+    if [[ "${i}" == "${source_hostname}" ]];then
+    
+      source_domain="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f2)";
+      source_interface="$(echo ${A_servers_tests[$j]} | cut -d ',' -f3)";
+      target_hostname="$(echo  ${A_servers_tests[$j]} | cut -d ',' -f4)";
+      target_domain="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f5)";
+      target_interface="$(echo ${A_servers_tests[$j]} | cut -d ',' -f6)";
+      testcase_test="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f7)";
+
+      # Full FQDN vars used in table rows. 
+      source="${source_hostname}${source_domain}";
+      target="${target_hostname}${target_domain}";
+
+      # Display table test row.
+      printf '%s\t %-15s\t %-20s\t %-30s\t %-45s\t %s%s%s\n' "${rs}${row_count}" "${cy}${source_interface}" "${yl}${target_interface}" "${cy}${source}" "${yl}${target}" "${rs}${testcase_test}";
+      ((row_count++));
+    fi;
+  done;
+
+# ---------------------------------------------------------------
+# [7] After each server display a summary of tests by interface card.
+
+  source_test_count="${A_count_per_server[$i]}";
+
+  printf '%s\n' "--------------------------------------------------------------------------------------------------------------------------------------------------";
+  printf '%s\n' "--> No. of tests from ${i}: ${source_test_count}";
+  printf '%s'   "--> No. of tests per interface: ";
+  
+  flag="false";
+  for k in "${!A_server_interface[@]}"
+  do 
+    hn=$(echo ${k} | cut -d ',' -f1);
+    if [[ "${hn}" == "${source_hostname}" ]];then
+      card=$(echo     ${k} | cut -d ',' -f2);
+      qty=$(echo ${A_server_interface[$k]});
+      if [[ "${flag}" == "false" ]];then
+        printf '%s' "${card} (${qty})";
+        flag="true";
+      else
+        printf '%s' ", ${card} (${qty})";
+      fi;
+    fi;
+  done;
+  printf '%s\n';
+  printf '%s\n' "--------------------------------------------------------------------------------------------------------------------------------------------------";
+done; 
+
+${spacer};
+cluster_count=0;
+for k in "${!A_count_per_server[@]}"; do
+  ((cluster_count += A_count_per_server[$k]))
+done;
+
+printf "%b\n"   "${yl}--> Info - ${rs}Total number of tests across cluster is ${cluster_count}";
+};

@@ -1,0 +1,46 @@
+function fp_S2_display_tests_inventory_stats(){
+
+total_testcases_count=0;
+testcases_count=0;
+g=1;
+
+until [[ "${A_variables_tests["vj_tests_group${g}_t1_from"]}" == "" ]]
+do   
+    t=1;
+    until [[ "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" == "" ]]
+    do
+        if [[ "${A_variables_tests["vj_tests_environment"]}" == "${vj_inventory_environment}" ]];then
+            ((testcases_count++));
+        fi;
+        ((t++));
+    done;
+    total_testcases_count=$((total_testcases_count+testcases_count));
+    A_groups_testcases_count[Group${g}]="${testcases_count}";
+    testcases_count=0;
+    ((g++));
+done;
+
+number_of_groups="${#A_groups_testcases_count[@]}";
+
+# Display test json stats.
+printf "%b\n" "${yl}--> Info - ${rs}Display test json stats:";
+printf "%b\n" "${yl}--> Info - ${rs}Test definition file:\t\t ${vp_path_tests_short}";
+printf "%b\n" "${yl}--> Info - ${rs}Total no. of 'groups':\t\t ${#A_groups_testcases_count[@]}";
+printf "%b\n" "${yl}--> Info - ${rs}Total no. of 'testcases':\t\t ${total_testcases_count}";
+${spacer};
+
+# Display table header.
+printf '%s\t %-40s\t %s%s\n' "${bold}#" "${cyB}Group" "${ylB}No. of testcases${rs}";
+${equalsLine};
+
+# Display row for each group.
+count=1;
+for i in $(seq 1 $number_of_groups)
+do
+  if [[ "${count}" != "1" ]];then
+    ${dashLine};
+  fi;
+  printf '%s\t %-40s\t %s%s\n' "${rs}${count}" "${cy}Group${i}" "${yl}${A_groups_testcases_count[Group$i]}${rs}";
+  ((count++));
+done;
+};

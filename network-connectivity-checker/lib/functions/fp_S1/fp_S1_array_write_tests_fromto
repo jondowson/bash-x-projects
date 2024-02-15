@@ -1,0 +1,136 @@
+function fp_S1_array_write_tests_fromto(){
+
+# Example inventory json used for code comments below.
+
+# Each key and value pair is an 'element' 
+# - Example 'key' and 'value' in the array: 
+#   - 'servers_prod1_service_default_domain' = '.swissptt.ch' 
+#   - 'servers_prod1_service_default' is an element with children elements but not a direct value.
+
+# "servers":{
+#     "prod1":{
+#         "service":{
+#             "default":{
+#                 "domain":               ".swissptt.ch",   
+#                 "interface":            "eth0",
+#                 "gateway":              "100.110.16.33",
+#                 "tcsmsc-prod11":        "100.110.16.36",
+#                 "tcsmsc-prod12":        "100.110.16.37",
+#                 "tcsmsc-prod13":        "100.110.16.38",
+#                 "tcsmsc-prod14":        "100.110.16.39",
+#                 "tcsmsc-prod15":        "100.110.16.40",
+#                 "tcsmsc-prod16":        "100.110.16.41"
+#             }
+#         }
+#     }
+# }
+
+# Example tests json used for code comments below.
+
+# "tests":{
+#   "name":              "TC6000_PROD",
+#   "description":       "Tests over all interfaces for TC6000 VMs in the production environment.",
+#   "environment":       "prod",
+#   "group1":{
+#      "interface":      "eth0",
+#      "description":    "The default interface.", 
+#      "t1":{
+#        "description":    "Virtual vRAMS USSD from each VM in each cluster.",
+#        "from":           "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+#        "to":             "{inventory_services_swisscom_v-rams_ussd}",
+#        "test":           "tcp-12850",
+#        "type":           "default_vrams_ussd",
+#        "direction":      "out"  
+#      }
+#   }
+# }
+
+local test_string;
+local g t p c e;
+
+local key_parent;
+local key_hostname;
+local parent;
+
+local domain;
+local interface;
+local gateway;
+local pubIp;
+
+# The current loop test in focus from the test json.
+# - e.g: 'servers_prod1_service_default_tcsmsc-prod11' 
+test_string="${1}";
+g="${2}";
+t="${3}";
+p="${4}";
+c="${5}";
+e="${6}";
+
+# Remove the prefix path to this element so we can make a comparison below.
+# e.g: from 'vj_servers_prod1_service_default'               get 'default'
+# e.g: from 'vj_servers_prod1_service_default_tcsmsc-prod11' get 'tcsmsc-prod11'
+# e.g: from 'vj_servers_prod1_service_default_domain'        get 'domain'   
+# e.g: from 'vj_servers_prod1_service_default_interface'     get 'interface'
+# e.g: from 'vj_servers_prod1_service_default_gateway'       get 'gateway'   
+key_hostname=$(f_utils_strings_bpe "del_fromleft_upto_including" "${test_string}" "_");
+
+# Ignore these json defined key-value pairs. We just want the hostname. e.g. tcsmsc-prod11
+if [[ "${key_hostname}" != "domain" ]] && [[ "${key_hostname}" != "interface" ]] && [[ "${key_hostname}" != "gateway" ]];then
+
+    # Get the full key parent tree of the current json element in the loop.
+    # e.g: from 'vj_servers_prod1_service_default_tcsmsc-prod11' get 'vj_servers_prod1_service_default'
+    # e.g: from 'vj_servers_prod1_service_default'               get 'vj_servers_prod1_service'  
+    key_parent=$(f_utils_strings_bpe "keep_fromleft_upto_excluding" "${test_string}" "_");
+
+    # Match on the source servers rather than the target ones.
+    if [[ "${vp_target_parentheses}" == "from" ]];then
+        
+        # Isolate the parent grouping / cluster for source servers. 
+        # - E.g. from 'vj_inventory_servers_prod1_service_default' get 'prod1'.
+        #   - 'prod1_service_default'
+        #   - 'prod1'
+        parent=$(f_utils_strings_bpe "del_fromleft_upto_including" "${key_parent}" "inventory_servers_");
+        parent=$(f_utils_strings_bpe "keep_fromleft_upto_excluding_first" "${parent}" "_");
+    else
+        # For targets we need to grab the last part of the string.
+        # - E.g. from '' get 'vj_inventory_services_swisscom_splunk' get 'splunk'.
+        parent="${key_parent##*_}";
+    fi;
+
+    # Get the values from these sibling json elements.
+    domain="${A_variables_inventory[${key_parent}_domain]}";
+    interface="${A_variables_inventory[${key_parent}_interface]}";
+    gateway="${A_variables_inventory[${key_parent}_gateway]}";
+    pubIp="${A_variables_inventory[${key_parent}_${key_hostname}]}";
+
+    # For non-source machines such as services, we do not specify these the json, so make false.
+    if [[ "${interface}" == "" ]];  then interface="false"; fi;
+    if [[ "${gateway}" == "" ]];    then gateway="false"; fi;
+
+    value_string="${key_hostname},${domain},\
+    ${pubIp},${interface},${gateway},${parent},\
+    ${testcase_description},${testcase_test},${testcase_type},\
+    ${testcase_direction},${testcase_cfilter_type},${testcase_cfilter_strategy},${testcase_cfilter_grepon}";
+
+    # Remove any whitespaces from the strings, except for testcase_description.
+    value_string=$(echo "${value_string}" | ${vf_cmd_sed} 's/[[:space:]]//g');
+    value_string=$(echo "${value_string}" | awk -F, -v OFS=, -v newval="${testcase_description}" '{$7=newval; print}');
+
+    # Create a unique key comprising the group, test, parantheses, comma-position and element.
+    if [[ "${vp_target_parentheses}" == "from" ]];then
+        
+        # If interface card on source server is undefined in json the test is null and void.
+        if [[ "${interface}" == "false" ]];then
+            f_arrays_set_var "vp_dynamic_error_msg" "Source interface for ${key_hostname}is: ${source_interface}";
+            f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";
+            f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "4";
+        # Add this to the array of tests denoting source/origin server.
+        else
+            A_tests_from_only[${vp_target_parentheses}_g${g}_t${t}_p${p}_c${c}_e${e}]="${value_string}";
+        fi;
+    # Add this to the array of tests denoting target/destination server.
+    else
+        A_tests_to_only[${vp_target_parentheses}_g${g}_t${t}_p${p}_c${c}_e${e}]="${value_string}";
+    fi;
+fi;
+};

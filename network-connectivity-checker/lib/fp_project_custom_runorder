@@ -1,0 +1,103 @@
+function fp_project_custom_runorder(){
+
+# About:
+# - Perform logic before running a stage.
+# - Enables flags or conditions to alter program flow.
+# - Stages can be skipped or its tasks/functions altered.
+# - To skip a stage apply one or more logic checks to the case statement.
+
+# Usage:
+# fp_project_custom_runorder;
+# - no passed params but requires the global variable ${vp_stage_number}.
+
+# Example:
+#    "2")
+        # Skip stage if '--showstats' flag is 'false'.
+#       f_stages_skip "${vp_help_flags_showstats}" "false";;
+
+# - To alter which tasks and functions are run in a stage reassign its values in this array.
+# Example:
+#    "2")
+        # Alter stage if condition is met.
+#       if [[ "${a}" == ${b} ]];then
+#         A_json_stages["vj_stages_s2_t1_f1"]="fp_S2_function_to_run_instead";
+#       fi;;
+# - To ignore a function already defined in project.json 
+#   - assign it to empty quotes or perhaps better still assign it to a screen msg display function.
+
+# Script:
+# ---------------------------------------------------------------
+# [1] Handle case statement based on the current stage number.
+
+# Case statement to handle any passed flags or conditions that change program flow.
+case "${vp_stage_number}" in
+
+    # ---------------------------------------------------------------
+    # If not making any stage alterations then uncomment the asterix option.
+    # - then for all stages no changes will be applied.
+    # *)
+        # :
+        # ;;
+    # ---------------------------------------------------------------
+    "HELP")
+        # These messages will be appended to the project's help screen.
+        printf "%b\n" "${yl}--> Info - ${rs}This project's stages can be..";
+        printf "%b\n" "${yl}--> Info - ${rs} - skipped using the framework's '--SKIPSTAGES' flag. See example above. This overrides other flags.";
+        printf "%b\n" "${yl}--> Info - ${rs} - changed by passing the project flag '--remotecompute true'.";
+        printf "%b\n" "${yl}--> Info - ${rs}   - This will copy bash-x to the remote servers and processing will be initiated remotely.";
+        printf "%b\n" "${yl}--> Info - ${rs}   - This mode has more stages but the processing time is reduced.";
+        printf "%b\n" "${yl}--> Info - ${rs}   - Both 'local' and 'remote' modes achieve the same outcome.";
+        ${spacer};;
+
+    # ---------------------------------------------------------------
+    #"1")
+        # This stage of this project does not require runtime-alterations;;
+
+    # ---------------------------------------------------------------
+    "2")
+        # Skip stage if '--showstats' flag is 'false'.
+        f_stages_skip "${vp_help_flags_showstats}" "false";;
+
+    # ---------------------------------------------------------------
+    "3")
+        # Skip stage if '--remotecompute' flag is 'true'.
+        f_stages_skip "${vp_help_flags_remotecompute}" "true";;
+
+    # ---------------------------------------------------------------
+    #"4")
+        # This stage of this project does not require runtime-alterations;;   
+    
+    # ---------------------------------------------------------------
+    "5")
+        # Skip stage if '--remotecompute' flag is 'true'.
+        f_stages_skip "${vp_help_flags_remotecompute}" "true";;
+
+    # ---------------------------------------------------------------
+    "6")
+        # Skip stage if '--remotecompute' flag is 'false'.
+        f_stages_skip "${vp_help_flags_remotecompute}" "false";;
+    # ---------------------------------------------------------------
+    "7")
+        # Skip stage if '--remotecompute' flag is 'false'.    
+        f_stages_skip "${vp_help_flags_remotecompute}" "false";;
+
+    # ---------------------------------------------------------------
+    #"7_remote1")
+        # This stage of this project does not require runtime-alterations;;
+
+    # ---------------------------------------------------------------
+    "8")   
+        # Skip stage if '--remotecompute' flag is 'false'.
+        f_stages_skip "${vp_help_flags_remotecompute}" "false";;
+
+    # ---------------------------------------------------------------
+    "9")   
+        # Skip stage if framework flag '--TIDYUP' flag is 'false'.
+        f_stages_skip "${vf_framework_flags_behaviour_tidyup}" "false";;
+
+    # ---------------------------------------------------------------
+    "10")   
+        # Skip stage if '--tidyupproject' flag is 'false'.
+        f_stages_skip "${vp_help_flags_tidyupproject}" "false";;
+esac;  
+};

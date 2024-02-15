@@ -1,0 +1,96 @@
+{
+    "help":{
+        "description1":         "Help screen is generated from this info. This is where all project flags are defined.",
+        "note_shortflag":       "Should be 1-3 lowercase letters. E.g. '-i'. The long flag name is the block header. E.g. '--inventory'",
+        "note_type1":           "Flag type tags are required for paths to enable runtime resolution and correct display on project screens",
+        "note_type2":           "If path to file:   path_file_local, path_file_remote, path_file_local_relative_project, path_file_remote_relative_project, path_file_local_relative_framework, path_file_remote_relative_framework",
+        "note_type3":           "If path to folder: path_folder_local, path_folder_remote, path_folder_local_relative_project, path_folder_remote_relative_project, path_folder_local_relative_framework, path_folder_remote_relative_framework",
+        "note_type4":           "Optionally for project specific checks and display purposes, start tag types with 'custom_'",
+        "note_type6":           "Examples: custom_binary (e.g. true or false), custom_software, cusotm_environment etc.",
+        "note_type7":           "These tags will be passed by the framework to the project's 'fp_custom_tags' function",
+        "flags": {
+            "cspath":{
+                "shortflag":    "csp",
+                "type":         "path_folder_remote",
+                "about":        "Remote path to checkerscript.",
+                "default":      "/home/omndocker/scripts/"
+            },
+            "csname":{
+                "shortflag":    "csn",
+                "type":         "",
+                "about":        "Remote checkerscript name without file extension.",
+                "default":      "network_connectivity_checker_cronjob"
+            },
+            "inventory":{
+                "shortflag":    "i",
+                "type":         "path_file_local",
+                "about":        "Json framework path.",
+                "default":      "~/Workspace/eigental/bash-x-inventory/TC6000/ref/inventory.json"
+            },
+            "loglifemins":{
+                "shortflag":    "llm",
+                "type":         "",
+                "about":        "Time to keep logs in mins.",
+                "default":      "60"
+            },
+            "promname":{
+                "shortflag":    "pn",
+                "type":         "",
+                "about":        "The prometheus file name.",
+                "default":      "network_connectivity_checker.prom"
+            },
+            "prompath":{
+                "shortflag":    "pp",
+                "type":         "path_folder_remote",
+                "about":        "The full remote path to the prometheus export folder.",
+                "default":      "/var/lib/prometheus/textfile_collector/"
+            },
+            "remotecompute":{
+                "shortflag":    "rc",
+                "type":         "",
+                "about":        "Generate scripts on remote servers.",
+                "default":      "false"
+            },
+            "showstats":{
+                "shortflag":    "ss",
+                "type":         "",
+                "about":        "The stats + tests will be displayed to screen.",
+                "default":      "false"
+            },
+            "tests":{
+                "shortflag":    "t",
+                "type":         "path_file_local_relative_project",
+                "about":        "The relative json project path. Start at 'json/'.",
+                "default":      "json/tests/TC6000/ref/tests.json"
+            },
+            "tidyupproject":{
+                "shortflag":    "tup",
+                "type":         "",
+                "about":        "Delete remote checkerscript and prom files.",
+                "default":      "false"
+            }
+        },
+        "usage": {
+            "usage1": {
+                "description":  "Show the help menu for this project.",
+                "example":      "bash-x --PROJECT network-connectivity-checker --HELP"
+            },
+            "usage2": {
+                "description":  "Run project using default values for all flags (set in project.json).",
+                "example":      "bash-x --PROJECT network-connectivity-checker"
+            },
+            "usage3": {
+                "description":  "Specify inventory and tests json files with flags + use default values for all other flags.",
+                "example":      "bash-x --PROJECT network-connectivity-checker -i inventory/TC6000/stag/inventory.json -t json/tests/TC6000/stag/tests.json"
+            },
+            "usage4": {
+                "description":  "Specify subset of servers where to run project. E.g. all servers from prod1 cluster + prod21.",
+                "example":      "bash-x --PROJECT network-connectivity-checker --LIMIT 'prod1,prod21'"
+            },
+            "usage5": {
+                "description":  "Remove framework folder,network-checker script and the prometheus file from remote machines. Skip create and send stages.",
+                "example":      "bash-x --PROJECT network-connectivity-checker --SKIPSTAGES '3,5' -TU true -tup true"
+            }
+        }
+    }
+}

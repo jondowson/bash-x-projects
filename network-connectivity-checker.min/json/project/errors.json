@@ -1,0 +1,227 @@
+{
+    "errors": {
+        "about":                "All project error messages by stage.",
+        "note_check1":          "Each error can also have an optional check. These are usually performed in Stage 0.",
+        "note_check2":          "Check_type options: 'var_empty', 'path_file', 'path_folder' or 'command'",
+        "note_check3":          "Checks can be either true (required) or false on the local mahine or remote machines.",
+        "note_check4":          "Listing comma separated commands means that at least one has to be available.",
+        "note_hints1":          "Hints can be a string or a variable reference without the leading '$'.",
+        "note_hints2":          "To limit variable creep, hints can also make use of the reserved 'vp_dynamic_error_msg' that can be assigned before error handling in any function.",
+        "s0":{
+            "e1": {
+                "message":      "This passed flag is not correct!",
+                "hint":         "vf_flag_current"
+            },
+            "e2": {
+                "message":      "The flag value for sshtargetpath is not set!",
+                "hint":         "add setting to the framework.json",
+                "check": {
+                    "this":     "vf_framework_flags_ssh_targetpath",
+                    "type":     "var_empty",
+                    "local":    "true",
+                    "remote":   "false"
+                }
+            },
+            "e3": {
+                "message":      "Bad path to the ssh private key!",
+                "hint":         "vf_framework_flags_ssh_keypath",
+                "check": {
+                    "this":     "vf_framework_flags_ssh_keypath",
+                    "type":     "path_file",
+                    "local":    "true",
+                    "remote":   "false"
+                }
+            },
+            "e4": {
+                "message":      "Bad path to the passphrase file!",
+                "hint":         "vf_framework_flags_ssh_passpath",
+                "check": {
+                    "this":     "vf_framework_flags_ssh_passpath",
+                    "type":     "path_file",
+                    "local":    "false",
+                    "remote":   "false"
+                }
+            },
+            "e5": {
+                "message":      "Bad path to the test json!",
+                "hint":         "vp_help_flags_tests",
+                "check": {
+                    "this":     "vp_help_flags_tests",
+                    "type":     "path_file",
+                    "local":    "true",
+                    "remote":   "true"
+                }
+            },
+            "e6": {
+                "message":      "Bad path to the inventory json!",
+                "hint":         "vp_help_flags_inventory",
+                "check": {
+                    "this":     "vp_help_flags_inventory",
+                    "type":     "path_file",
+                    "local":    "true",
+                    "remote":   "true"
+                }
+            },
+            "e7": {
+                "message":      "The command 'ssh' is unavailable for user..",
+                "hint":         "USER",
+                "check": {
+                    "this":     "ssh",
+                    "type":     "command",
+                    "local":    "true",
+                    "remote":   "false"
+                }
+            },
+            "e8": {
+                "message":      "No file transfer command is available for user..",
+                "hint":         "USER",
+                "check": {
+                    "this":     "sftp,scp",
+                    "type":     "command",
+                    "local":    "true",
+                    "remote":   "false"
+                }
+            },
+            "e9": {
+                "message":      "The sshpass command is not available for user..",
+                "hint":         "USER",
+                "check": {
+                    "this":     "sshpass",
+                    "type":     "command",
+                    "local":    "true",
+                    "remote":   "false"
+                }
+            }
+        },
+        "s1":{
+            "e1": {
+                "message":      "Failed to process json files!",
+                "hint":         "Is the json well formatted and accessible?"
+            },
+            "e2": {
+                "message":      "Inconsistent inventory / tests environment!",
+                "hint":         "Use same environment for both!"
+            },
+            "e3": {
+                "message":      "Inconsistent parentheses in tests json!",
+                "hint":         "vp_dynamic_error_msg"
+            },
+            "e4": {
+                "message":      "Source interface card not defined in inventory json!",
+                "hint":         "vp_dynamic_error_msg"
+            }
+        },
+        "s2":{
+            "e1": {
+                "message":      "",
+                "hint":         ""
+            }
+        },
+        "s3":{
+            "e1": {
+                "message":      "Failed to confirm remote project!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            },
+            "e2": {
+                "message":      "The array 'A_tests_to_all' is empty!",
+                "hint":         "Check upstream json and array processing!"
+            }
+        },
+        "s4":{
+            "e1": {
+                "message":      "Failed to test remote server readiness!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        },
+        "s5":{
+            "e1": {
+                "message":      "Failed to send network-checker-script to remote server!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        },
+        "s6":{
+            "e1": {
+                "message":      "Empty remote path - exiting now!",
+                "hint":         "Check all remote file paths."
+            },
+            "e2": {
+                "message":      "No write permission on remote folder!",
+                "hint":         "Check paths in json and permissions."
+            },
+            "e3": {
+                "message":      "Unable to delete remote folder!",
+                "hint":         "Check paths in json and permissions."
+            },
+            "e4": {
+                "message":      "Not able to send framework to remote server!",
+                "hint":         "Check paths in json and permissions."
+            },
+            "e5": {
+                "message":      "Not able to send project to remote server!",
+                "hint":         "Check paths in json and permissions."
+            },
+            "e6": {
+                "message":      "Not able set execute permission for framework!",
+                "hint":         "vp_dynamic_error_msg"
+            }
+        },
+        "s7":{
+            "e1": {
+                "message":      "Failed to start remote project!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            },
+            "e2": {
+                "message":      "Failed to complete remote tests!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        },
+        "s7_remote1":{
+            "e1": {
+                "message":      "Failed to run project on remote server!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            },
+            "e2": {
+                "message":      "Inconsistent inventory / tests environment!",
+                "hint":         "Use same environment for both!"
+            },
+            "e3": {
+                "message":      "Inconsistent parentheses in tests json!",
+                "hint":         "vp_dynamic_error_msg"
+            },
+            "e4": {
+                "message":      "Source interface card not defined in inventory json!",
+                "hint":         "vp_dynamic_error_msg"
+            },
+            "e5": {
+                "message":      "Unregognised test type!",
+                "hint":         "vp_dynamic_error_msg"
+            }
+        },
+        "s8":{
+            "e1": {
+                "message":      "Failed to collect remote logs!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        },
+        "s9":{
+            "e1": {
+                "message":      "Failed to connect to remote server!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            },
+            "e2": {
+                "message":      "Failed to check remote folder permissions!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            },
+            "e3": {
+                "message":      "Failed to delete remote folder!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        },
+        "s10":{
+            "e1": {
+                "message":      "Failed to remove remote project files!",
+                "hint":         "Check creds + local / remote logs and file paths!"
+            }
+        }
+    }
+}

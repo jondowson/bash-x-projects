@@ -1,0 +1,201 @@
+function fp_S1_array_create_tests_to_all(){
+
+# About:
+# The arrays 'A_tests_from_only' and 'A_tests_to_only' have now been created.
+# - This function now matches on their keys to create the final array that defines all tests from each source server.
+
+# The structure of the two arrays are the same.
+# A_tests_from_only[from_${g}_${t}_${p}_${c}_${e}]=${key_hostname}${domain},${pubIp},${testcase_test},${interface},${gateway},..";
+#     A_tests_to_only[to_${g}_${t}_${p}_${c}_${e}]=${key_hostname}${domain},${pubIp},${testcase_test},${interface},${gateway,..}";
+
+# Below the code loops through each source server in the 'from' array.
+# - Then for each source server, it loops through each target server in the 'to' array.
+# - For both it attempts to match on the 'test_id' value it extracts from their respective keys.
+# - On matches it adds to the following two arrays.
+# A_tests_to_all        
+#   --> this array holds the complete list of tests for all servers. 
+#   --> this is used when creating the bespoke scripts locally before sending them to the remote machines.
+#   --> this is used for displaying all the tests if the showstats flag is true.
+# A_tests_to_all_remote 
+#   --> this tailored array is created when this function is run on the remote server.
+#   --> It only holds those tests to be run on that remote server.
+
+# The test_id comprises the group, test and parentheses number. 
+# - So from example code below a test_id of 'g1_t1_p1' is 'inventory_servers_prod1_service_default'.
+# - These three are sufficient as we see in the example below that we also want to run tests from 'inventory_servers_prod1_service_default' to 'inventory_services_swisscom_p-rams_ussd'.
+# In the tests json file, each parenthesis in the from field maps to the equivalent parenthesis in the to field.
+# For the below test, there is one parenthesis in both the from and two fields.
+# All the tests from 'inventory_servers_prod1_service_default' and 'inventory_servers_prod2_service_default' are applied to 'inventory_services_swisscom_v-rams_ussd'.
+# {
+# "tests":{
+#     "name":                 "TC6000_PROD",
+#     "description":          "Tests over all interfaces for TC6000 VMs in the production environment.",
+#     "environment":          "prod",
+#     "group1":{
+#         "interface":        "eth0",
+#         "description":      "The default interface.", 
+#         "t1":{
+#             "description":  "Virtual vRAMS USSD from each VM in each cluster.",
+#             "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+#             "to":           "{inventory_services_swisscom_v-rams_ussd,inventory_services_swisscom_p-rams_ussd}",
+#             "test":         "tcp-12850",
+#             "type":         "default_vrams_ussd",
+#             "direction":    "out"  
+#         },
+
+# ---------------------------------------------------------------
+# [1] Declare function vars as local to restrict scope.
+
+local i;
+local source_hostname;
+local source_domain;
+local source_pubIp;
+local testcase_test;
+local source_interface;
+local source_gateway;
+local test_id;
+local new_key;
+local testcase_test_semicolon_count;
+local testcase_test_count;
+local total_test_count;
+local tests_count_by_source;
+
+# ---------------------------------------------------------------
+# [2] Outer loop - the source servers.
+
+for i in "${!A_tests_from_only[@]}"
+do
+    
+    source_hostname="$(echo ${A_tests_from_only[$i]}           | cut -d ',' -f1)";
+    source_domain="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f2)";
+    source_pubIp="$(echo ${A_tests_from_only[$i]}              | cut -d ',' -f3)";
+    source_interface="$(echo ${A_tests_from_only[$i]}          | cut -d ',' -f4)";
+    source_gateway="$(echo ${A_tests_from_only[$i]}            | cut -d ',' -f5)";
+    source_parent="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f6)";
+    testcase_description="$(echo ${A_tests_from_only[$i]}      | cut -d ',' -f7)";
+    testcase_test="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f8)";
+    testcase_type="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f9)";
+    testcase_direction="$(echo ${A_tests_from_only[$i]}        | cut -d ',' -f10)";
+    testcase_cfilter_type="$(echo ${A_tests_from_only[$i]}     | cut -d ',' -f11)";
+    testcase_cfilter_strategy="$(echo ${A_tests_from_only[$i]} | cut -d ',' -f12)";
+    testcase_cfilter_grepon="$(echo ${A_tests_from_only[$i]}   | cut -d ',' -f13)";
+
+    # Set flag to true before tests in loop.
+    skip="true";
+
+    # If running on remote machine, skip if source_hostname is not that of the remote machine.
+    if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]];then
+        if [[ "${source_hostname}${source_domain}" == *"${vf_local_hostname_short}"* ]];then
+            skip="false";
+        fi;
+
+    # Skip all source_hostnames that are not applied by the --LIMIT flag if used.
+    elif [[ "${vf_framework_flags_behaviour_limit}" != "false" ]];then
+        for k in ${a_limit[@]}
+        do
+            if [[ "${source_hostname}" == *"${k}"* ]];then
+                skip="false";
+            fi;
+        done;
+    else
+        skip="false";
+    fi;
+
+    # Jump to next iteration of loop if true.
+    if [[ "${skip}" == "true" ]];then 
+        continue;
+    else
+        # Isolate the test id. e.g. 'g1_t11_p1_c2_e3'
+        test_id=$(f_utils_strings_bpe "del_fromleft_upto_including"  "${i}"       "from_"); 
+        test_id=$(f_utils_strings_bpe "keep_fromleft_upto_excluding" "${test_id}" "_c");
+        
+        # Create this array to get a unique list of source servers. First remove whitespace.
+        value_string="${source_hostname},${source_domain},${source_pubIp},${source_interface},${source_gateway},${source_parent}";
+        #value_string=$(echo "${value_string}" | ${vf_cmd_sed} 's/[[:space:]]//g');
+        A_source_servers["${source_hostname}"]="${value_string}";
+    fi;
+
+# ---------------------------------------------------------------
+# [3] Inner loop - the target servers.
+
+    for j in "${!A_tests_to_only[@]}"
+    do
+        # Match on the test_id of the source servers.
+        if [[ "${j}" == *"to_${test_id}"* ]];then
+
+            target_hostname="$(echo ${A_tests_to_only[$j]}           | cut -d ',' -f1)";
+            target_domain="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f2)";
+            target_pubIp="$(echo ${A_tests_to_only[$j]}              | cut -d ',' -f3)";
+            target_interface="$(echo ${A_tests_to_only[$j]}          | cut -d ',' -f4)";
+            target_gateway="$(echo ${A_tests_to_only[$j]}            | cut -d ',' -f5)";
+            target_parent="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f6)";
+            testcase_description="$(echo ${A_tests_to_only[$j]}      | cut -d ',' -f7)";
+            testcase_test="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f8)";
+            testcase_type="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f9)";
+            testcase_direction="$(echo ${A_tests_to_only[$j]}        | cut -d ',' -f10)";
+            testcase_cfilter_type="$(echo ${A_tests_to_only[$j]}     | cut -d ',' -f11)";       
+            testcase_cfilter_strategy="$(echo ${A_tests_to_only[$j]} | cut -d ',' -f12)";
+            testcase_cfilter_grepon="$(echo ${A_tests_to_only[$j]}   | cut -d ',' -f13)";     
+
+            # Create unique key string for the final array.
+            # - test_id is nearly unique but requires source amd target hostnames to distinguish between same tests defined in same group.
+            # - source_interface should not be required for uniqueness if groups are defined based on interface cards but lets add it anyway.
+            # - This is enough for the key - all the other information other than 'test_id' is in the value string. 
+            new_key="${test_id},${source_hostname},${source_domain},${target_hostname},${source_interface},${testcase_test}";
+
+            # This is performed on the remote machine(s) for its bespoke list of tests.
+            # Any tests from a machine to itself will be excluded.
+            if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]] && [[ "${target_hostname}${target_domain}" != *"${vf_local_hostname_short}"* ]];then
+       
+                A_tests_to_all_remote[${new_key}]="${A_tests_from_only[$i]},${A_tests_to_only[$j]}";
+
+            # This is performed on the local machine and again exclude tests from servers to themselves.
+            elif [[ "${target_hostname}${target_domain}" != *"${source_hostname}"* ]];then
+
+                A_tests_to_all[${new_key}]="${A_tests_from_only[$i]},${A_tests_to_only[$j]}";
+            
+                # For display purposes - add to a total count of all tests.
+                testcase_test_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");
+                testcase_test_count=$((testcase_test_semicolon_count+1));
+                total_test_count=$((total_test_count+testcase_test_count));
+
+                testcase_test_count_sping=$(grep -o "sping" <<< "${testcase_test}" | wc -l);
+                total_test_count_sping=$((total_test_count_sping+testcase_test_count_sping));
+
+                testcase_test_count_sping_removed=$((testcase_test_count-testcase_test_count_sping));   
+                total_test_count_sping_removed=$((total_test_count_sping_removed+testcase_test_count_sping_removed));
+
+                # Add to an array used for stats to display the number of targets for each source server.
+                tests_count_by_source=${A_tests_count_by_source[${source_hostname},${source_domain},${source_interface}]};
+                A_tests_count_by_source[${source_hostname},${source_domain},${source_interface}]="$((tests_count_by_source+testcase_test_count))";
+            fi;
+        fi;
+    done;
+done;
+
+# ---------------------------------------------------------------
+# [4] Test if the array is empty.
+
+if [[ "${#A_tests_to_all[@]}" -eq "0" ]];then 
+    f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "5" "";  
+fi;
+
+# ---------------------------------------------------------------
+# [5] Copy unique list of source servers into a normal array.
+
+for i in ${!A_source_servers[@]}
+do
+    a_source_servers+=($i);
+done;
+
+# ---------------------------------------------------------------
+# [6] Sort the arrays for later display purposes.
+
+readarray -t a_source_servers_sorted < <(printf '%s\0' "${a_source_servers[@]}" | sort -z | xargs -0n1);
+
+# Assign total number of tests counted to variable for display purposes.
+f_arrays_set_var "vp_total_test_count"  "${total_test_count}";
+f_arrays_set_var "vp_total_test_count_sping"  "${total_test_count_sping}";
+f_arrays_set_var "vp_total_test_count_sping_removed"  "${total_test_count_sping_removed}";
+printf "%b\n" "${yl}--> Info - ${rs}The test schedule has been created.";
+};

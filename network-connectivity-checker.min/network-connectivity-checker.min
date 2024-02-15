@@ -1,0 +1,511 @@
+ fp_S0_logs_create(){ mkdir -p "${vp_path_folder_timestamp_tests_logs}"; mkdir -p "${vp_path_folder_timestamp_tests_logs_sublocal}"; mkdir -p "${vp_path_folder_timestamp_tests_logs_subremote}"; touch    "${vp_path_folder_timestamp_tests_logs}console.log"; };  fp_S0_set_vars(){ f_arrays_set_var "vp_path_tests_short" "$(f_utils_strings_bpe 'del_fromleft_upto_including' ${vp_help_flags_tests} 'json/tests/')"; f_arrays_set_var "vp_path_folder_timestamp"                         "${vp_project_rootpath}input_output/${vf_timestamp}/"; f_arrays_set_var "vp_path_folder_timestamp_tests"                   "${vp_path_folder_timestamp}${vp_path_tests_short}/"; f_arrays_set_var "vp_path_folder_timestamp_tests_logs"              "${vp_path_folder_timestamp_tests}logs/"; f_arrays_set_var "vp_path_folder_timestamp_tests_logs_sublocal"     "${vp_path_folder_timestamp_tests_logs}subprocesses_local/"; f_arrays_set_var "vp_path_folder_timestamp_tests_logs_subremote"    "${vp_path_folder_timestamp_tests_logs}subprocesses_remote/"; f_arrays_set_var "vp_path_folder_logs" "${vp_path_folder_timestamp_tests}logs/"; f_arrays_set_var "vp_path_file_cronjob"              "${vp_help_flags_cspath}${vp_help_flags_csname}"; f_arrays_set_var "vp_path_file_prometheus"           "${vp_help_flags_prompath}${vp_help_flags_promname}"; f_arrays_set_var "vp_path_file_prometheus_sping"     "${vp_help_flags_prompath}sping_${vp_help_flags_promname}"; f_arrays_set_var "vp_path_file_prometheus_sping_raw" "${vp_help_flags_prompath}pingstats_${vp_help_flags_promname}.txt"; f_arrays_set_var "vp_total_test_count" "0"; };  fp_S0_ui_banner(){ local path_short_inventory; local path_short_test; path_short_inventory=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${vp_help_flags_inventory}" "${vf_path_framework_home}");  path_short_tests=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${vp_help_flags_tests}" "${vf_path_framework_home}");  printf "%b\n" "${yl}--> Project name:${cy}         ${vj_project_name}"; printf "%b\n" "${yl}--> Project repo:${cy}         ${vj_project_repo}"; printf "%b\n" "${yl}--> Project version:${cy}      ${vj_project_version}${rs}"; ${dashLine}; ${spacer}; printf "%b\n" "${yl}--> Project started with these passed flags.${rs}"; ${spacer}; printf "%b\n" "${vf_args_passed}"; ${spacer}; printf "%b\n" "Note: for '${yl}Flag overide${rs}'"; printf "%b\n" "--> any passed flags with a different value to the json default will appear as an overide."; printf "%b\n" "--> folder paths are amended with a final '/' if not present. Thse will appear as an overide. Check the json!"; printf "%b\n" "--> project relative paths defined in the json will appear as absolute paths below."; printf "%b\n" "--> paths specified with '~/' are resolved using the environment variable \${HOME}."; ${spacer};  printf '%s\t\t %s\t %s\n' "${cy}Flags (-short --long)" "${yl}Flag overide?" "${rs}Runtime-value"; ${dashLine}; for i in ${!A_json_help[@]} ; do     string="vj_help_flags_";     charcount=$(f_utils_strings "count_chars" "${i}" "_");     stem=$(echo ${i} | ${vf_cmd_sed} 's/_[^_]*$//');     if [[ "${i}" == *"${string}"* ]] && [[ "${charcount}" -eq 4 ]] && [[ "${done_array[*]}" != *"${stem}"* ]];then          longflag="$(echo ${i} | cut -f 4 -d_)";         shortflag="${A_json_help[${stem}_shortflag]}";         about="${A_json_help[${stem}_about]}";         default="${A_json_help[${stem}_default]}";         type="${A_json_help[${stem}_type]}";         project_var="vp_help_flags_${longflag}";         if [[ "${type}" == *"path_file_local"* ]] || [[ "${type}" == *"path_folder_local"* ]];then             A_paths_local["${shortflag},${longflag},${default},${type}"]="${!project_var}";         elif [[ "${type}" == *"path_file_remote"* ]] || [[ "${type}" == *"path_folder_remote"* ]];then             A_paths_remote["${shortflag},${longflag},${default},${type}"]="${!project_var}";         elif [[ "${!project_var}" != "${default}" ]];then             printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${!project_var}${rs}";          else             printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${!project_var}"; fi;         done_array+=( "${stem}" ); fi; done; ${dashLine}; printf "%b\n" "${yl}--> Project flags with local paths.${rs}"; ${dashLine}; for i in ${!A_paths_local[@]} ; do     shortflag="$(echo $i | cut -d ',' -f1)";     longflag="$(echo $i  | cut -d ',' -f2)";     default="$(echo $i   | cut -d ',' -f3)";     type="$(echo $i      | cut -d ',' -f4)";     flag_value="$(echo ${A_paths_local[$i]})";      suffix_path="";     if [[ "${type}" == *"path_file_local_relative_framework"* ]];then         suffix_path="${vf_path_framework_home}";     elif [[ "${type}" == *"path_file_local_relative_project"* ]];then         suffix_path="${vp_project_rootpath}";     elif [[ "${type}" == "path_file_local" ]] || [[ "${type}" == "path_folder_local" ]];then         if [[ "${default}" == *"~/"* ]];then             default=$(f_utils_strings_bpe "del_fromleft_upto_including" "${default}" "~/");             suffix_path="${HOME}/"; fi; fi;     if [[ "${flag_value}" != "${suffix_path}${default}" ]];then         printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${flag_value}${rs}";      else         printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${flag_value}"; fi; done; ${dashLine}; printf "%b\n" "${yl}--> Project flags with remote paths.${rs}"; ${dashLine}; for i in ${!A_paths_remote[@]} ; do     shortflag="$(echo $i | cut -d ',' -f1)";     longflag="$(echo $i  | cut -d ',' -f2)";     default="$(echo $i   | cut -d ',' -f3)";     type="$(echo $i      | cut -d ',' -f4)";     flag_value="$(echo ${A_paths_remote[$i]})";      if [[ "${flag_value}" != "${default}" ]];then         printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${flag_value}${rs}";      else         printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${flag_value}"; fi; done; ${equalsLine}; };  fp_S1_array_create_tests_fromto(){ local param_array=("from" "to"); local to_left_parenth_count; local to_right_parenth_count; local from_left_parenth_count; local from_right_parenth_count; local tests_parentheses_string; local tests_parentheses_substring; local tests_parentheses_string_semicolon_count; local tests_parentheses_substring; local tests_parentheses_substring_value; local tests_parentheses_string_value; local key_parent; local key_hostname; local domain; local g t c p e; f_arrays_set_var "vp_target_parentheses" ""; for vp_target_parentheses in ${param_array[@]} ; do     g=0;     while true; do         ((g++));         tests_parentheses="${A_variables_tests["vj_tests_group${g}_t1_${vp_target_parentheses}"]}";         if [[ ${tests_parentheses} == "" ]];then             break;         else              t=0;             while true; do                 ((t++));                 tests_parentheses="${A_variables_tests["vj_tests_group${g}_t${t}_${vp_target_parentheses}"]}";                 testcase_description="${A_variables_tests["vj_tests_group${g}_t${t}_description"]}";                 testcase_test="${A_variables_tests["vj_tests_group${g}_t${t}_test"]}";                 testcase_type="${A_variables_tests["vj_tests_group${g}_t${t}_type"]}";                 testcase_direction="${A_variables_tests["vj_tests_group${g}_t${t}_direction"]}";                 testcase_cfilter_type="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_type"]}";                 testcase_cfilter_strategy="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_strategy"]}";                 testcase_cfilter_grepon="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_grepon"]}";                 if [[ "${testcase_cfilter_type}" != "" ]];then                      testcase_cfilter_type="$(f_utils_strings_printf     "escape_string" "${testcase_cfilter_type}")";                     testcase_cfilter_strategy="$(f_utils_strings_printf "escape_string" "${testcase_cfilter_strategy}")";                     testcase_cfilter_grepon="$(f_utils_strings_printf   "escape_string" "${testcase_cfilter_grepon}")";                 else                     testcase_cfilter_type=""; fi;                 if [[ ${tests_parentheses} == "" ]];then                     break;                 else                     to_left_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_to"]}" "{");                     to_right_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_to"]}" "}");                     from_left_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" "{");                     from_right_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" "}");                     if [[ "${to_left_parenth_count}" != "${to_right_parenth_count}" ]] || [[ "${from_left_parenth_count}" != "${from_right_parenth_count}" ]];then                         f_arrays_set_var "vp_dynamic_error_msg" "Group ${g}, Test ${t}";                         f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";                         f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "3";                      elif [[ "${to_left_parenth_count}" != "${from_left_parenth_count}" ]];then                         f_arrays_set_var "vp_dynamic_error_msg" "Group ${g}, Test ${t}";                         f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";                         f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "3";                      else                          p=1;                         until [ "${p}" -gt $((to_left_parenth_count)) ]                         ; do                             tests_parentheses_string=$(echo "${tests_parentheses}" | cut -d "{" -f$((p+1)) | cut -d "}" -f1);                             tests_parentheses_string_comma_count=$(f_utils_strings "count_chars" "${tests_parentheses_string}" ",");                             if [[ "${tests_parentheses_string_comma_count}" -eq "0" ]];then                                  tests_parentheses_string_value="${A_variables_inventory[vj_${tests_parentheses_string}]}";                                 if [[ "${tests_parentheses_string_value}" != "" ]];then                                     c=1;                                     e=1;                                     fp_S1_array_write_tests_fromto "vj_${tests_parentheses_string}" "${g}" "${t}" "${p}" "${c}" "${e}";                                 else                                     c=1;                                     fp_S1_loop_children_elements "vj_${tests_parentheses_string}" "${g}" "${t}" "${p}" "${c}"; fi;                             else                                 c=0;                                 until [ "${c}" -gt $((tests_parentheses_string_comma_count)) ]                                 ; do                                     tests_parentheses_substring=$(echo "${tests_parentheses_string}" | cut -d "," -f"$((c+1))");                                     tests_parentheses_substring_value="${A_variables_inventory[vj_${tests_parentheses_substring}]}";                                     if [[ "${tests_parentheses_substring_value}" != "" ]];then                                         e=1;                                         fp_S1_array_write_tests_fromto "vj_${tests_parentheses_substring}" "${g}" "${t}" "${p}" "$((c+1))" "${e}";                                     else                                          fp_S1_loop_children_elements "vj_${tests_parentheses_substring}" "${g}" "${t}" "${p}" "$((c+1))"; fi;                                     ((c++)); done; fi;                             ((p++)); done; fi; fi; done; fi; done; done; };  fp_S1_array_create_tests_to_all(){ local i; local source_hostname; local source_domain; local source_pubIp; local testcase_test; local source_interface; local source_gateway; local test_id; local new_key; local testcase_test_semicolon_count; local testcase_test_count; local total_test_count; local tests_count_by_source; for i in "${!A_tests_from_only[@]}" ; do     source_hostname="$(echo ${A_tests_from_only[$i]}           | cut -d ',' -f1)";     source_domain="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f2)";     source_pubIp="$(echo ${A_tests_from_only[$i]}              | cut -d ',' -f3)";     source_interface="$(echo ${A_tests_from_only[$i]}          | cut -d ',' -f4)";     source_gateway="$(echo ${A_tests_from_only[$i]}            | cut -d ',' -f5)";     source_parent="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f6)";     testcase_description="$(echo ${A_tests_from_only[$i]}      | cut -d ',' -f7)";     testcase_test="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f8)";     testcase_type="$(echo ${A_tests_from_only[$i]}             | cut -d ',' -f9)";     testcase_direction="$(echo ${A_tests_from_only[$i]}        | cut -d ',' -f10)";     testcase_cfilter_type="$(echo ${A_tests_from_only[$i]}     | cut -d ',' -f11)";     testcase_cfilter_strategy="$(echo ${A_tests_from_only[$i]} | cut -d ',' -f12)";     testcase_cfilter_grepon="$(echo ${A_tests_from_only[$i]}   | cut -d ',' -f13)";     skip="true";     if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]];then         if [[ "${source_hostname}${source_domain}" == *"${vf_local_hostname_short}"* ]];then             skip="false"; fi;     elif [[ "${vf_framework_flags_behaviour_limit}" != "false" ]];then         for k in ${a_limit[@]}         ; do             if [[ "${source_hostname}" == *"${k}"* ]];then                 skip="false"; fi; done;     else         skip="false"; fi;     if [[ "${skip}" == "true" ]];then          continue;     else         test_id=$(f_utils_strings_bpe "del_fromleft_upto_including"  "${i}"       "from_");          test_id=$(f_utils_strings_bpe "keep_fromleft_upto_excluding" "${test_id}" "_c");         value_string="${source_hostname},${source_domain},${source_pubIp},${source_interface},${source_gateway},${source_parent}";         A_source_servers["${source_hostname}"]="${value_string}"; fi; for j in "${!A_tests_to_only[@]}"     ; do         if [[ "${j}" == *"to_${test_id}"* ]];then             target_hostname="$(echo ${A_tests_to_only[$j]}           | cut -d ',' -f1)";             target_domain="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f2)";             target_pubIp="$(echo ${A_tests_to_only[$j]}              | cut -d ',' -f3)";             target_interface="$(echo ${A_tests_to_only[$j]}          | cut -d ',' -f4)";             target_gateway="$(echo ${A_tests_to_only[$j]}            | cut -d ',' -f5)";             target_parent="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f6)";             testcase_description="$(echo ${A_tests_to_only[$j]}      | cut -d ',' -f7)";             testcase_test="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f8)";             testcase_type="$(echo ${A_tests_to_only[$j]}             | cut -d ',' -f9)";             testcase_direction="$(echo ${A_tests_to_only[$j]}        | cut -d ',' -f10)";             testcase_cfilter_type="$(echo ${A_tests_to_only[$j]}     | cut -d ',' -f11)";                    testcase_cfilter_strategy="$(echo ${A_tests_to_only[$j]} | cut -d ',' -f12)";             testcase_cfilter_grepon="$(echo ${A_tests_to_only[$j]}   | cut -d ',' -f13)";                  new_key="${test_id},${source_hostname},${source_domain},${target_hostname},${source_interface},${testcase_test}";             if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]] && [[ "${target_hostname}${target_domain}" != *"${vf_local_hostname_short}"* ]];then                 A_tests_to_all_remote[${new_key}]="${A_tests_from_only[$i]},${A_tests_to_only[$j]}";             elif [[ "${target_hostname}${target_domain}" != *"${source_hostname}"* ]];then                 A_tests_to_all[${new_key}]="${A_tests_from_only[$i]},${A_tests_to_only[$j]}";                 testcase_test_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");                 testcase_test_count=$((testcase_test_semicolon_count+1));                 total_test_count=$((total_test_count+testcase_test_count));                 testcase_test_count_sping=$(grep -o "sping" <<< "${testcase_test}" | wc -l);                 total_test_count_sping=$((total_test_count_sping+testcase_test_count_sping));                 testcase_test_count_sping_removed=$((testcase_test_count-testcase_test_count_sping));                    total_test_count_sping_removed=$((total_test_count_sping_removed+testcase_test_count_sping_removed));                 tests_count_by_source=${A_tests_count_by_source[${source_hostname},${source_domain},${source_interface}]};                 A_tests_count_by_source[${source_hostname},${source_domain},${source_interface}]="$((tests_count_by_source+testcase_test_count))"; fi; fi; done; done; if [[ "${#A_tests_to_all[@]}" -eq "0" ]];then      f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "5" ""; fi; for i in ${!A_source_servers[@]} ; do     a_source_servers+=($i); done; readarray -t a_source_servers_sorted < <(printf '%s\0' "${a_source_servers[@]}" | sort -z | xargs -0n1); f_arrays_set_var "vp_total_test_count"  "${total_test_count}"; f_arrays_set_var "vp_total_test_count_sping"  "${total_test_count_sping}"; f_arrays_set_var "vp_total_test_count_sping_removed"  "${total_test_count_sping_removed}"; printf "%b\n" "${yl}--> Info - ${rs}The test schedule has been created."; };  fp_S1_array_write_tests_fromto(){ local test_string; local g t p c e; local key_parent; local key_hostname; local parent; local domain; local interface; local gateway; local pubIp; test_string="${1}"; g="${2}"; t="${3}"; p="${4}"; c="${5}"; e="${6}"; key_hostname=$(f_utils_strings_bpe "del_fromleft_upto_including" "${test_string}" "_"); if [[ "${key_hostname}" != "domain" ]] && [[ "${key_hostname}" != "interface" ]] && [[ "${key_hostname}" != "gateway" ]];then     key_parent=$(f_utils_strings_bpe "keep_fromleft_upto_excluding" "${test_string}" "_");     if [[ "${vp_target_parentheses}" == "from" ]];then         parent=$(f_utils_strings_bpe "del_fromleft_upto_including" "${key_parent}" "inventory_servers_");         parent=$(f_utils_strings_bpe "keep_fromleft_upto_excluding_first" "${parent}" "_");     else         parent="${key_parent##*_}"; fi;     domain="${A_variables_inventory[${key_parent}_domain]}";     interface="${A_variables_inventory[${key_parent}_interface]}";     gateway="${A_variables_inventory[${key_parent}_gateway]}";     pubIp="${A_variables_inventory[${key_parent}_${key_hostname}]}";     if [[ "${interface}" == "" ]];  then interface="false"; fi;     if [[ "${gateway}" == "" ]];    then gateway="false"; fi;     value_string="${key_hostname},${domain},    ${pubIp},${interface},${gateway},${parent},    ${testcase_description},${testcase_test},${testcase_type},    ${testcase_direction},${testcase_cfilter_type},${testcase_cfilter_strategy},${testcase_cfilter_grepon}";     value_string=$(echo "${value_string}" | ${vf_cmd_sed} 's/[[:space:]]//g');     value_string=$(echo "${value_string}" | awk -F, -v OFS=, -v newval="${testcase_description}" '{$7=newval; print}');     if [[ "${vp_target_parentheses}" == "from" ]];then         if [[ "${interface}" == "false" ]];then             f_arrays_set_var "vp_dynamic_error_msg" "Source interface for ${key_hostname}is: ${source_interface}";             f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";             f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "4";         else             A_tests_from_only[${vp_target_parentheses}_g${g}_t${t}_p${p}_c${c}_e${e}]="${value_string}"; fi;     else         A_tests_to_only[${vp_target_parentheses}_g${g}_t${t}_p${p}_c${c}_e${e}]="${value_string}"; fi; fi; };  fp_S1_json_inventory_tests(){ printf "%b\n" "${yl}--> Info - ${rs}Processing the inventory json file."; f_json_recurse "$(cat ${vp_help_flags_inventory})" "vj"; printf "%b\n" "${yl}--> Info - ${rs}Processing the tests json file."; f_json_recurse "$(cat ${vp_help_flags_tests})" "vj"; if [[ "${vj_inventory_environment}" != "${vj_tests_environment}" ]]; then     f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";     f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "2"; else     printf "%b\n" "${yl}--> Info - ${rs}Both json files reference the same environment (${vj_inventory_environment})."; fi; };  fp_S1_loop_children_elements(){ local test_string; local key; local g t c p e; test_string="${1}"; g="${2}"; t="${3}"; p="${4}"; c="${5}"; e="1"; for key in "${!A_variables_inventory[@]}" ; do       if [[ "${key}" == *"${test_string}"* ]] && [[ "${A_variables_inventory[$key]}" != "" ]] &&        [[ "${key}" != *"_domain" ]] && [[ "${key}" != *"_interface" ]] && [[ "${key}" != *"_gateway" ]];then              fp_S1_array_write_tests_fromto "${key}" "${g}" "${t}" "${p}" "${c}" "${e}";            ((e++)); fi; done; };  fp_S10_remove_remote_project_files(){ f_ssh_cmd "[ -f ${vp_path_file_prometheus} ]    && rm -f ${vp_path_file_prometheus}"    "1"; f_ssh_cmd "[ -f ${vp_path_file_cronjob} ] && rm -f ${vp_path_file_cronjob}" "1"; };  fp_S2_display_array_tests_to_all(){ local source_domain; local source_pubIp; local source_interface; local source_gateway; local source_parent; local testcase_description; local testcase_test; local testcase_type; local testcase_direction; local testcase_cfilter; local target_hostname; local target_domain; local target_pubIp; local target_interface; local target_gateway; local target_parent; local test_count_per_interface_card; local test_count; local row_count; local unique_test_id; local server_test_count; local source; local target; local test; test_count_per_interface_card=0; test_count=0; row_count=1; unique_test_id="0"; ${spacer}; printf "%b\n"   "${yl}--> Info - ${rs}Making table of all tests, please wait.."; ${spacer}; printf '%s\t %-10s\t %-30s\t %-33s\t %-50s\t %s%s\n' "${bold}#" "${cyB}S-interface" "${ylB}T-interface" "${cyB}Source" "${ylB}Target" "${rs}Tests"; printf '%s\n' "=================================================================================================================================================="; for i in "${a_source_servers_sorted[@]}" ; do   server_test_count="0"; for j in "${!A_tests_to_all[@]}"   ; do     source_hostname="$(echo               ${A_tests_to_all[$j]} | cut -d ',' -f1)";     if [[ "${i}" == "${source_hostname}" ]];then       source_domain="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f2)";       source_pubIp="$(echo              ${A_tests_to_all[$j]} | cut -d ',' -f3)";       source_interface="$(echo          ${A_tests_to_all[$j]} | cut -d ',' -f4)";       source_gateway="$(echo            ${A_tests_to_all[$j]} | cut -d ',' -f5)";       source_parent="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f6)";       testcase_description="$(echo      ${A_tests_to_all[$j]} | cut -d ',' -f7)";       testcase_test="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f8)";       testcase_type="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f9)";       testcase_direction="$(echo        ${A_tests_to_all[$j]} | cut -d ',' -f10)";       testcase_cfilter_type="$(echo     ${A_tests_to_all[$j]} | cut -d ',' -f11)";       testcase_cfilter_strategy="$(echo ${A_tests_to_all[$j]} | cut -d ',' -f12)";       testcase_cfilter_grepon="$(echo   ${A_tests_to_all[$j]} | cut -d ',' -f13)";       target_hostname="$(echo           ${A_tests_to_all[$j]} | cut -d ',' -f14)";       target_domain="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f15)";       target_pubIp="$(echo              ${A_tests_to_all[$j]} | cut -d ',' -f16)";       target_interface="$(echo          ${A_tests_to_all[$j]} | cut -d ',' -f17)";       target_gateway="$(echo            ${A_tests_to_all[$j]} | cut -d ',' -f18)";       target_parent="$(echo             ${A_tests_to_all[$j]} | cut -d ',' -f19)";       source="${source_hostname}${source_domain}";       target="${target_hostname}${target_domain}";       tests_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");       if [[ "${tests_semicolon_count}" -gt 0 ]];then          test_count=$((tests_semicolon_count+1)); for x in $(seq 1 ${test_count})         ; do           test="$(echo ${testcase_test} | cut -d ';' -f${x})";           A_servers_tests["${i},${unique_test_id}"]="${source_hostname},${source_domain},${source_interface},${target_hostname},${target_domain},${target_interface},${test}";           ((unique_test_id++)); done;       else         test_count=1;         A_servers_tests["${i},${unique_test_id}"]="${source_hostname},${source_domain},${source_interface},${target_hostname},${target_domain},${target_interface},${testcase_test}";         ((unique_test_id++)); fi;       server_test_count=$((server_test_count+test_count));       A_count_per_server[$i]="${server_test_count}";       if [[ "${A_server_interface[${source_hostname},${source_interface}]}" == "" ]];then          test_count_per_interface_card=${test_count};       else         test_count_per_interface_card=$((${A_server_interface[${source_hostname},${source_interface}]}+test_count)); fi;       A_server_interface["${source_hostname},${source_interface}"]="${test_count_per_interface_card}"; fi; done; done; for i in "${a_source_servers_sorted[@]}" ; do   for j in "${!A_servers_tests[@]}"   ; do      source_hostname="$(echo  ${A_servers_tests[$j]} | cut -d ',' -f1)";     if [[ "${i}" == "${source_hostname}" ]];then       source_domain="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f2)";       source_interface="$(echo ${A_servers_tests[$j]} | cut -d ',' -f3)";       target_hostname="$(echo  ${A_servers_tests[$j]} | cut -d ',' -f4)";       target_domain="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f5)";       target_interface="$(echo ${A_servers_tests[$j]} | cut -d ',' -f6)";       testcase_test="$(echo    ${A_servers_tests[$j]} | cut -d ',' -f7)";       source="${source_hostname}${source_domain}";       target="${target_hostname}${target_domain}";       printf '%s\t %-15s\t %-20s\t %-30s\t %-45s\t %s%s%s\n' "${rs}${row_count}" "${cy}${source_interface}" "${yl}${target_interface}" "${cy}${source}" "${yl}${target}" "${rs}${testcase_test}";       ((row_count++)); fi; done;   source_test_count="${A_count_per_server[$i]}";   printf '%s\n' "--------------------------------------------------------------------------------------------------------------------------------------------------";   printf '%s\n' "--> No. of tests from ${i}: ${source_test_count}";   printf '%s'   "--> No. of tests per interface: ";   flag="false"; for k in "${!A_server_interface[@]}"   ; do      hn=$(echo ${k} | cut -d ',' -f1);     if [[ "${hn}" == "${source_hostname}" ]];then       card=$(echo     ${k} | cut -d ',' -f2);       qty=$(echo ${A_server_interface[$k]});       if [[ "${flag}" == "false" ]];then         printf '%s' "${card} (${qty})";         flag="true";       else         printf '%s' ", ${card} (${qty})"; fi; fi; done;   printf '%s\n';   printf '%s\n' "--------------------------------------------------------------------------------------------------------------------------------------------------"; done;  ${spacer}; cluster_count=0; for k in "${!A_count_per_server[@]}"; do   ((cluster_count += A_count_per_server[$k])) ; done; printf "%b\n"   "${yl}--> Info - ${rs}Total number of tests across cluster is ${cluster_count}"; };  fp_S2_display_tests_inventory_stats(){ total_testcases_count=0; testcases_count=0; g=1; until [[ "${A_variables_tests["vj_tests_group${g}_t1_from"]}" == "" ]] ; do        t=1;     until [[ "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" == "" ]]     ; do         if [[ "${A_variables_tests["vj_tests_environment"]}" == "${vj_inventory_environment}" ]];then             ((testcases_count++)); fi;         ((t++)); done;     total_testcases_count=$((total_testcases_count+testcases_count));     A_groups_testcases_count[Group${g}]="${testcases_count}";     testcases_count=0;     ((g++)); done; number_of_groups="${#A_groups_testcases_count[@]}"; printf "%b\n" "${yl}--> Info - ${rs}Display test json stats:"; printf "%b\n" "${yl}--> Info - ${rs}Test definition file:\t\t ${vp_path_tests_short}"; printf "%b\n" "${yl}--> Info - ${rs}Total no. of 'groups':\t\t ${#A_groups_testcases_count[@]}"; printf "%b\n" "${yl}--> Info - ${rs}Total no. of 'testcases':\t\t ${total_testcases_count}"; ${spacer}; printf '%s\t %-40s\t %s%s\n' "${bold}#" "${cyB}Group" "${ylB}No. of testcases${rs}"; ${equalsLine}; count=1; for i in $(seq 1 $number_of_groups) ; do   if [[ "${count}" != "1" ]];then     ${dashLine}; fi;   printf '%s\t %-40s\t %s%s\n' "${rs}${count}" "${cy}Group${i}" "${yl}${A_groups_testcases_count[Group$i]}${rs}";   ((count++)); done; };  fp_S3_write_script_loop_tests(){ declare -A A_bespoke_tests; for i in "${!A_tests_to_all[@]}" ; do     source_hostname="$(echo ${A_tests_to_all[$i]} | cut -d ',' -f1)";      if [[ "${loop_source_hostname}" == "${source_hostname}" ]];then         source_hostname="$(echo ${A_tests_to_all[$i]}           | cut -d ',' -f1)";         source_domain="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f2)";         source_pubIp="$(echo ${A_tests_to_all[$i]}              | cut -d ',' -f3)";         source_interface="$(echo ${A_tests_to_all[$i]}          | cut -d ',' -f4)";         source_gateway="$(echo ${A_tests_to_all[$i]}            | cut -d ',' -f5)";         source_parent="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f6)";         testcase_description="$(echo ${A_tests_to_all[$i]}      | cut -d ',' -f7)";         testcase_test="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f8)";         testcase_type="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f9)";         testcase_direction="$(echo ${A_tests_to_all[$i]}        | cut -d ',' -f10)";         testcase_cfilter_type="$(echo ${A_tests_to_all[$i]}     | cut -d ',' -f11)";         testcase_cfilter_strategy="$(echo ${A_tests_to_all[$i]} | cut -d ',' -f12)";         testcase_cfilter_grepon="$(echo ${A_tests_to_all[$i]}   | cut -d ',' -f13)";         target_hostname="$(echo ${A_tests_to_all[$i]}           | cut -d ',' -f14)";         target_domain="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f15)";         target_pubIp="$(echo ${A_tests_to_all[$i]}              | cut -d ',' -f16)";         target_interface="$(echo ${A_tests_to_all[$i]}          | cut -d ',' -f17)";         target_gateway="$(echo ${A_tests_to_all[$i]}            | cut -d ',' -f18)";         target_parent="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f19)";         env=$(echo ${source_parent} | grep -o '.*[^0-9]');         cluster=$(echo ${source_parent//[!0-9]/});         test_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");             semicolon_count=0;         until [ "${semicolon_count}" -gt ${test_semicolon_count} ]         ; do             if [[ "${test_semicolon_count}" -gt 0 ]];then                  test=$(echo "${testcase_test}" | cut -d ";" -f"$((semicolon_count+1))");             else                 test="${testcase_test}"; fi;             sleep 0.1 &             pid="${!}";             value_string="${env},${cluster},                ${source_hostname},${source_domain},                ${target_hostname},${target_domain},${target_parent},                ${source_pubIp},${target_pubIp},                ${source_interface},${target_interface},                ${source_gateway},${target_gateway},                ${iproute_check},${iproute_check_count},                ${testcase_description},${test},${testcase_type},                ${testcase_direction},${testcase_cfilter_type},                ${testcase_cfilter_strategy},${testcase_cfilter_grepon}";             value_string=$(echo "${value_string}" | ${vf_cmd_sed} 's/[[:space:]]//g');             value_string=$(echo "${value_string}" | awk -F, -v OFS=, -v newval="${testcase_description}" '{$16=newval; print}');             A_bespoke_tests[$pid]="${value_string}";             ((semicolon_count++)); done; fi; done; printf "%b\n" "Writing connectivity test script for remote server: ${loop_source_hostname}"; fp_S3_write_script_heredoc; };  fp_S5_copy_checker_script(){ f_ssh_scp_send "${vp_path_folder_timestamp_tests}${loop_source_hostname}.sh" "${vp_path_file_cronjob}.sh" "1"; };  fp_S7_remote_create_files(){ if [[ "${vp_help_flags_cronjob}" == "false" ]] && [[ "${vp_help_flags_cronjobremove}" == "false" ]]; then      echo "INFO: cronjob script will not be re-created or removed."; elif [[ "${vp_help_flags_cronjob}" == "false" ]] && [[ "${vp_help_flags_cronjobremove}" == "true" ]]; then      if [[ "${vp_path_file_cronjob}" != "" ]] && [[ "${vp_path_file_prometheus}" != "" ]] && [[ "${vp_path_file_prometheus_sping}" != "" ]];then         rm -rf ${vp_path_file_cronjob};         rm -rf ${vp_path_file_prometheus};         rm -rf ${vp_path_file_prometheus_sping};         echo "INFO: cronjob script has been removed."; fi; else     mkdir -p "${vp_help_flags_cspath}";     touch ${vp_path_file_cronjob}.tmp;     chmod +x ${vp_path_file_cronjob}.tmp;     mkdir -p "${vp_help_flags_prompath}";     touch ${vp_path_file_prometheus}.prom.tmp;     chmod +rw ${vp_path_file_prometheus}.prom.tmp;     touch ${vp_path_file_prometheus_sping}.prom.tmp;     chmod +rw ${vp_path_file_prometheus_sping}.prom.tmp;     fp_S5_remote_write_cronjob;     mv ${vp_path_file_cronjob}.tmp ${vp_path_file_cronjob};     chmod +x ${vp_path_file_cronjob}; fi; };  fp_S7_remote_create_logs(){ if [[ -d "${vp_project_rootpath}input_output/logs/" ]];then     rm -rf   "${vp_project_rootpath}input_output/logs/"; fi; mkdir -p "${vp_project_rootpath}input_output/logs/"; touch    "${vp_project_rootpath}input_output/logs/console_${vf_local_hostname_short}.log"; };  fp_multipids_create(){ local source_hostname; local loop_source_row; for source_hostname in "${!A_source_servers[@]}" ; do     loop_source_row="${A_source_servers[${source_hostname}]}";     loop_source_hostname="$(echo  ${A_source_servers[${source_hostname}]} | cut -d ',' -f1)";     loop_source_domain="$(echo    ${A_source_servers[${source_hostname}]} | cut -d ',' -f2)";     loop_source_pubIp="$(echo     ${A_source_servers[${source_hostname}]} | cut -d ',' -f3)";     loop_source_interface="$(echo ${A_source_servers[${source_hostname}]} | cut -d ',' -f4)";     loop_source_gateway="$(echo   ${A_source_servers[${source_hostname}]} | cut -d ',' -f5)";     loop_source_parent="$(echo    ${A_source_servers[${source_hostname}]} | cut -d ',' -f6)";     f_stages_functions "--multipid" >> "${vp_path_folder_timestamp_tests_logs_sublocal}${loop_source_hostname}.log" 2>&1 &     pid=${!};     A_stage_pid_details["${pid}_${vp_stage_number}"]="${loop_source_row}"; done; };  fp_multipids_display_details_S10(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                    ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:        ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:           ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:       ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Delete checker script:  ${vp_path_file_cronjob}";         printf "%b\n" "${yl}--> Info - ${rs}Delete prom file:       ${vp_path_file_prometheus}"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S3(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for pid_stage in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${pid_stage}     | cut -d '_' -f1)";     stageid="$(echo ${pid_stage} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$pid_stage]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$pid_stage]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$pid_stage]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$pid_stage]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S4(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]} | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Remote parent:       ${source_parent}";         printf "%b\n" "${yl}--> Info - ${rs}Remote folder:       ${SSH_PATH_TARGET}${vj_framework_name}"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S5(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Copy from:           ${vp_path_folder_timestamp}${source_hostname}.sh";         printf "%b\n" "${yl}--> Info - ${rs}Copy to:             ${vp_path_file_cronjob}"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S6(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Copy bash-x from:    ${vf_path_framework_home}";         printf "%b\n" "${yl}--> Info - ${rs}Copy bash-x to:      ${SSH_PATH_TARGET}${vj_framework_name}";         printf "%b\n" "${yl}--> Info - ${rs}Copy project from:   ${vf_path_projects}";         printf "%b\n" "${yl}--> Info - ${rs}Copy bash-x to:      ${SSH_PATH_TARGET}bash-x-projects"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S7(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Remote command:      ${SSH_PATH_TARGET}bash-x ${vf_args_passed} --REMOTECOMPUTE"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S8(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Copy logs from:      ${vp_path_remote_logs}";         printf "%b\n" "${yl}--> Info - ${rs}Copy logs to:        ${vp_path_folder_timestamp_tests_logs_subremote}"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_details_S9(){ printf "\n%b\n" "${cyB}--> ${vp_stage_concurrentMsg_value}${rs}"; for i in "${!A_stage_pid_details[@]}" ; do     pid="$(echo ${i}     | cut -d '_' -f1)";     stageid="$(echo ${i} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then             source_hostname="$(echo ${A_stage_pid_details[$i]}   | cut -d ',' -f1)";         source_domain="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f2)";         source_pubIp="$(echo ${A_stage_pid_details[$i]}      | cut -d ',' -f3)";         source_interface="$(echo ${A_stage_pid_details[$i]}  | cut -d ',' -f4)";         source_gateway="$(echo ${A_stage_pid_details[$i]}    | cut -d ',' -f5)";         source_parent="$(echo ${A_stage_pid_details[$i]}     | cut -d ',' -f6)";         ${dashLine};         printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";         printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";         printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";         printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";         printf "%b\n" "${yl}--> Info - ${rs}Remove folder:       ${SSH_PATH_TARGET}${vj_framework_name}";         printf "%b\n" "${yl}--> Info - ${rs}Remove folder:       ${SSH_PATH_TARGET}bash-x-projects"; fi; done; ${spacer};  printf "%b\n" "${cyB}--> Results to follow..${rs}"; };  fp_multipids_display_fail(){ local count; local stageid; local source_hostname; local source_pubIp; local source_test; local source_interface; local json_code; local message; local hint; ${spacer}; printf "%b\n" "${rdB}--> Stage ${vp_stage_number} failed pids${rs}.."; count=0; for pid_stage in "${!A_stage_pid_fails[@]}" ; do     pid="$(echo ${pid_stage}     | cut -d '_' -f1)";     stageid="$(echo ${pid_stage} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then          ((count++)); fi; done; if [[ ${#A_stage_pid_fails[@]} -ne 0 ]] && [[ ${count} -gt 0 ]];then     for pid_stage in "${!A_stage_pid_fails[@]}"     ; do         pid="$(echo ${pid_stage}     | cut -d '_' -f1)";         stageid="$(echo ${pid_stage} | cut -d '_' -f2)";         if [[ "${vp_stage_number}" == "${stageid}" ]];then                 source_hostname="$(echo ${A_stage_pid_details[$pid_stage]}   | cut -d ',' -f1)";             source_domain="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f2)";             source_pubIp="$(echo ${A_stage_pid_details[$pid_stage]}      | cut -d ',' -f3)";             source_interface="$(echo ${A_stage_pid_details[$pid_stage]}  | cut -d ',' -f4)";             source_gateway="$(echo ${A_stage_pid_details[$pid_stage]}    | cut -d ',' -f5)";             source_parent="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f6)";             json_code="$(echo vj_${A_stage_pid_fails[$pid_stage]}  | cut -d ',' -f1)";             message="$(echo ${A_stage_pid_fails[$pid_stage]}       | cut -d ',' -f2)";             hint="$(echo ${A_stage_pid_fails[$pid_stage]}          | cut -d ',' -f3)";             if [[ ${hint} == "vf_"* ]] || [[ ${hint} == "vp_"* ]] || [[ ${hint} == "vj_"* ]]; then hint=${!hint}; fi;             ${dashLine};             printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";             printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";             printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";             printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}";             printf "%b\n" "${yl}--> Info - ${rs}error.json:          ${json_code}";             printf "%b\n" "${yl}--> Info - ${rs}Message:             ${message}";             printf "%b\n" "${yl}--> Info - ${rs}Hint:                ${hint}"; fi; done; else     printf "%b\n" "${yl}--> Info - ${rs}All pids were successful!"; fi; };  fp_multipids_display_success(){ local count; local stageid; local pid; local source_hostname; local source_pubIp; local source_test; local source_interface; ${spacer}; printf "%b\n" "${grB}--> Stage ${vp_stage_number} successful pids${rs}.."; count=0; for pid_stage in ${a_stage_pid_success[@]} ; do     pid="$(echo ${pid_stage}     | cut -d '_' -f1)";     stageid="$(echo ${pid_stage} | cut -d '_' -f2)";     if [[ "${vp_stage_number}" == "${stageid}" ]];then         ((count++)); fi; done; if [[ ${count} -gt 0 ]];then     for pid_stage in "${a_stage_pid_success[@]}"     ; do         pid="$(echo ${pid_stage}     | cut -d '_' -f1)";         stageid="$(echo ${pid_stage} | cut -d '_' -f2)";         if [[ "${vp_stage_number}" == "${stageid}" ]];then              source_hostname="$(echo ${A_stage_pid_details[$pid_stage]}   | cut -d ',' -f1)";             source_domain="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f2)";             source_pubIp="$(echo ${A_stage_pid_details[$pid_stage]}      | cut -d ',' -f3)";             source_interface="$(echo ${A_stage_pid_details[$pid_stage]}  | cut -d ',' -f4)";             source_gateway="$(echo ${A_stage_pid_details[$pid_stage]}    | cut -d ',' -f5)";             source_parent="$(echo ${A_stage_pid_details[$pid_stage]}     | cut -d ',' -f6)";             ${dashLine};             printf "%b\n" "${yl}--> Info - ${rs}PID:                 ${pid}";             printf "%b\n" "${yl}--> Info - ${rs}Remote hostname:     ${source_hostname}";             printf "%b\n" "${yl}--> Info - ${rs}Remote pubIp:        ${source_pubIp}";             printf "%b\n" "${yl}--> Info - ${rs}Remote interface:    ${source_interface}"; fi; done; else     printf "%b\n" "${yl}--> Info - ${rs} All pids failed!"; fi; };  fp_multipids_wait(){ for pid_stage in "${!A_stage_pid_details[@]}" ; do   pid="$(echo ${pid_stage}     | cut -d '_' -f1)";   stageid="$(echo ${pid_stage} | cut -d '_' -f2)";   if [[ "${vp_stage_number}" == "${stageid}" ]];then     if wait $pid; then       errcode="${?}";       if [[ "${errcode}" == "0" ]];then         a_stage_pid_success+=("${pid}_${vp_stage_number}");       else                       json_err_code="errors_s${vp_stage_number}_e${errcode}";         json_err_message="vj_${json_err_code}_message";         json_err_hint="vj_${json_err_code}_hint";         A_stage_pid_fails["${pid}_${vp_stage_number}"]="${json_err_code},${!json_err_message},${!json_err_hint}";         f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "${errcode}" "${pid}"; fi;     else       errcode="${?}";           json_err_code="errors_s${vp_stage_number}_e${errcode}";       json_err_message="vj_${json_err_code}_message";       json_err_hint="vj_${json_err_code}_hint";       A_stage_pid_fails["${pid}_${vp_stage_number}"]="${json_err_code},${!json_err_message},${!json_err_hint}";       f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "${errcode}" "${pid}"; fi; fi; done; };
+function fp_S3_write_script_heredoc(){
+
+local array_count;
+
+# Write the cronjob script to the scripts folder on each TC6000 VM.
+#   - /home/omndocker/scripts/network_connectivity_checker_cronjob.bash
+# - This script has all the connectivity tests tailored for each VM at the time of the last run of the Jenkins pipeline.
+# - The results of this script are written to a prometheus export folder.
+#   - /var/lib/prometheus/textfile_collector/network_connectivity_checker.prom
+# - The names of the files and the paths are specified in the help.json for this project. 
+
+# [0] Write the bash script.
+# Note:
+# - variables that are escaped are resolved when the script is run by the cronjob.
+# - variables that are not escaped are resolved at the time of script creation. 
+#   - this happens on the remote machine so paths are tailored for each machine.
+
+# Change script path depending on local or remote creation.
+if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]];then
+    # On remote machine we create a tmp file and finally move it to the final .sh version. 
+    script_path_tmp="${vp_path_file_cronjob}.tmp";
+    script_path="${vp_path_file_cronjob}.sh";
+else
+    # Locally we write directly into the final .sh version, so these two vars are the same path.
+    script_path_tmp="${vp_path_folder_timestamp_tests}${loop_source_hostname}.sh";
+    script_path="${vp_path_folder_timestamp_tests}${loop_source_hostname}.sh";
+fi;
+
+printf "%s\n\n" "#!/usr/bin/env bash"                        > "${script_path_tmp}";
+printf "%s\n"   "# About:"                                  >> "${script_path_tmp}";
+printf "%s\n"   "# - This file was generated by the bash-x project 'network-connectivity-checker'."  >> "${script_path_tmp}";
+printf "%s\n"   "# - Created: $(date)"                      >> "${script_path_tmp}";
+printf "%s\n"   "declare -A A_bespoke_tests;"               >> "${script_path_tmp}";
+printf "%s\n"   "declare -A A_bespoke_tests_refreshed;"     >> "${script_path_tmp}";
+printf "%s\n"   "declare -A A_results;"                     >> "${script_path_tmp}";
+printf "%s\n"   "declare -A A_containers;"                  >> "${script_path_tmp}";
+printf "%s\n"   "declare -a a_containerlist;"               >> "${script_path_tmp}";
+
+cat <<EOF >> "${script_path_tmp}"
+
+# ================================================================
+# [1] Inline function to write test result entry to the prometheus file.
+function write_prometheus_file(){
+
+# ---------------------------------------------------------------
+# Assign passed parameter.
+test_result="\${1}";
+
+# ---------------------------------------------------------------
+# Create helpful message string for logs.
+
+# If the ip route check failed then the test result integer is incremented.
+# 0 = test passed and using correct route
+# 1 = test failed but using correct route
+# 2 = test passed but using incorrect route
+# 3 = test failed and using incorrect route.
+
+# No gateway used, i.e. a direct connection within the same cluster.
+if [[ "\${iproute_check_count}" == "2" ]];then
+
+    # Check that the local interface and local ip are correct.
+    if [[ "\${iproute_check}" != "\${source_interface} \${source_pubIp}" ]];then
+        test_result=\$((test_result+2));
+    fi;
+
+# Gateway is required if three values returned from 'ip route get' command.
+# - Check that local interface and local ip are correct.
+elif [[ "\${iproute_check_count}" == "3" ]];then
+    
+    # Bespoke code for TC6000 - For 'GRUMPY' containers.
+    # - Subtract one from the number of the host VM eth card and re-check against the iproute_check. 
+    # - If mismatch then add 2 to the following message score.
+    if [[ "\${vj_tests_platform}" == "TC6000" ]] && [[ "\${test:0:1}" == "c" ]] && [[ "\${container_type}" == *"GRUMPY"* ]];then
+        
+        card_id_vm=\${source_interface//[0-9]/};
+        card_number_vm=\${source_interface//[!0-9]/};
+        card_number_docker=\$((card_number_vm-1));
+        if [[ "\${iproute_check}" != "\${source_gateway} \${card_id_vm}\${card_number_docker} \${source_pubIp}" ]];then
+            test_result=\$((test_result+2));
+        fi; 
+    
+    # Default routing check. 
+    elif [[ "\${iproute_check}" != "\${source_gateway} \${source_interface} \${source_pubIp}" ]];then
+        test_result=\$((test_result+2));
+    fi;
+fi;
+
+# Create helpful interpretation message to add to logs.
+if   [[ "\${test_result}" == "0" ]];then
+    message="test has passed and route is correct [\${iproute_check}]";
+elif [[ "\${test_result}" == "1" ]];then
+    message="test has failed but route is correct [\${iproute_check}]";
+elif [[ "\${test_result}" == "2" ]];then
+    message="test has passed but route has failed [\${iproute_check}]";
+else    
+    message="test has failed and route has failed [\${iproute_check}]";
+fi;
+
+# ---------------------------------------------------------------
+# Print output to .prom file.
+
+if [[ \${test} == "sping" ]];then
+
+    # For each line in the results file.
+    ping_min=\$(cat ${vp_path_file_prometheus_sping_raw} | grep "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}" | cut -d ',' -f5);
+    ping_avg=\$(cat ${vp_path_file_prometheus_sping_raw} | grep "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}" | cut -d ',' -f6);
+    ping_max=\$(cat ${vp_path_file_prometheus_sping_raw} | grep "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}" | cut -d ',' -f7);
+    ping_std=\$(cat ${vp_path_file_prometheus_sping_raw} | grep "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}" | cut -d ',' -f8);
+    ping_pcl=\$(cat ${vp_path_file_prometheus_sping_raw} | grep "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}" | cut -d ',' -f9);
+
+    # Remove whitespace that has crept in.
+    ping_min="\${ping_min#"\${ping_min%%[![:space:]]*}"}";
+    ping_avg="\${ping_avg#"\${ping_avg%%[![:space:]]*}"}";
+    ping_max="\${ping_max#"\${ping_max%%[![:space:]]*}"}";
+    ping_std="\${ping_std#"\${ping_std%%[![:space:]]*}"}";
+    ping_pcl="\${ping_pcl#"\${ping_pcl%%[![:space:]]*}"}";
+
+    if [[ "\${ping_pcl}" == "100" ]]; then 
+        test_result=\$((test_result+1));
+    fi;
+
+    # Create helpful interpretation message to add to logs.
+    if   [[ "\${test_result}" == "0" ]];then
+        message="test has passed and route is correct [\${iproute_check}]";
+    elif [[ "\${test_result}" == "1" ]];then
+        message="test has failed but route is correct [\${iproute_check}]";
+    elif [[ "\${test_result}" == "2" ]];then
+        message="test has passed but route has failed [\${iproute_check}]";
+    else    
+        message="test has failed and route has failed [\${iproute_check}]";
+    fi;
+
+    string1="tc6000_networkchecker_sping{message=\"\${message}\",test=\"\${test}\",env=\"\${env}\",cluster=\"\${cluster}\"";
+    string2="source_interface=\"\${source_interface}\",target_interface=\"\${target_interface}\",source_host=\"\${source_hostname}\${source_domain}\",target_host=\"\${target_hostname}\${target_domain}\"";
+    string3="source_gateway=\"\${source_gateway}\",source_gateway=\"\${source_gateway}\",target_gateway=\"\${target_gateway}\",source_pubip=\"\${source_pubIp}\",target_pubip=\"\${target_pubIp}\",testcase_description=\"\${testcase_description}\",testcase_type=\"\${testcase_type}\",testcase_direction=\"\${testcase_direction}\"";
+    string4="ping_min=\"\${ping_min}\",ping_avg=\"\${ping_avg}\",ping_max=\"\${ping_max}\",ping_std=\"\${ping_std}\",ping_pcl=\"\${ping_pcl}\"}";
+    printf "%s\n" "\${string1},\${string2},\${string3},\${string4} \${test_result}" > /dev/null >> "${vp_path_file_prometheus_sping}.tmp";
+else
+    echo "tc6000_networkchecker{message=\"\${message}\",test=\"\${test}\",env=\"\${env}\",cluster=\"\${cluster}\",source_interface=\"\${source_interface}\",target_interface=\"\${target_interface}\",source_host=\"\${source_hostname}\${source_domain}\",target_host=\"\${target_hostname}\${target_domain}\",source_gateway=\"\${source_gateway}\",target_gateway=\"\${target_gateway}\",source_pubip=\"\${source_pubIp}\",target_pubip=\"\${target_pubIp}\",container_type=\"\${container_type}\",testcase_description=\"\${testcase_description}\",testcase_type=\"\${testcase_type}\",testcase_direction=\"\${testcase_direction}\"} \${test_result}" 2> /dev/null >> "${vp_path_file_prometheus}.tmp";
+fi;
+};
+
+# ================================================================
+# [2] Script starts here following the above inline function.
+# Note:
+# - variables that are escaped are resolved when the script is run by the cronjob.
+# - variables that are not escaped are resolved at the time of script creation. 
+
+# Create output files or clear them if they already exist. 
+> "${vp_path_file_prometheus}.tmp";
+> "${vp_path_file_prometheus_sping}.tmp";
+> "${vp_path_file_prometheus_sping_raw}";
+chmod +rw "${vp_path_file_prometheus}.tmp";
+chmod +rw "${vp_path_file_prometheus_sping}.tmp";
+chmod +rw "${vp_path_file_prometheus_sping_raw}";
+
+# Use this to play/avoid certain tasks below based on the platform. 
+vj_tests_platform=${vj_tests_platform};
+
+EOF
+
+# ================================================================
+# [3] Write the array into the script for all the tests to run from this server.
+
+array_count=0;
+for p in ${!A_bespoke_tests[@]}
+do 
+    # For reference here are all the elements.
+    # The iproute_check and iproute_check_count are initially blank 
+    # But these are then refreshed when the script runs.
+
+    # env="$(echo                         ${A_bespoke_tests[$p]} | cut -d ',' -f1)";
+    # cluster="$(echo                     ${A_bespoke_tests[$p]} | cut -d ',' -f2)";
+    # source_hostname="$(echo             ${A_bespoke_tests[$p]} | cut -d ',' -f3)";
+    # source_domain="$(echo               ${A_bespoke_tests[$p]} | cut -d ',' -f4)";
+    # target_hostname="$(echo             ${A_bespoke_tests[$p]} | cut -d ',' -f5)";
+    # target_domain="$(echo               ${A_bespoke_tests[$p]} | cut -d ',' -f6)";
+    # target_parent="$(echo               ${A_bespoke_tests[$p]} | cut -d ',' -f7)";
+    # source_pubIp="$(echo                ${A_bespoke_tests[$p]} | cut -d ',' -f8)";
+    # target_pubIp="$(echo                ${A_bespoke_tests[$p]} | cut -d ',' -f9)";
+    # source_interface="$(echo            ${A_bespoke_tests[$p]} | cut -d ',' -f10)";
+    # target_interface="$(echo            ${A_bespoke_tests[$p]} | cut -d ',' -f11)";
+    # source_gateway="$(echo              ${A_bespoke_tests[$p]} | cut -d ',' -f12)";
+    # target_gateway="$(echo              ${A_bespoke_tests[$p]} | cut -d ',' -f13)";
+    # iproute_check="$(echo               ${A_bespoke_tests[$p]} | cut -d ',' -f14)";
+    # iproute_check_count="$(echo         ${A_bespoke_tests[$p]} | cut -d ',' -f15)";
+    # testcase_description="$(echo        ${A_bespoke_tests[$p]} | cut -d ',' -f16)";
+    # test="$(echo                        ${A_bespoke_tests[$p]} | cut -d ',' -f17)";
+    # testcase_type="$(echo               ${A_bespoke_tests[$p]} | cut -d ',' -f18)";
+    # testcase_direction="$(echo          ${A_bespoke_tests[$p]} | cut -d ',' -f19)";
+    # testcase_cfilter_type="$(echo       ${A_bespoke_tests[$p]} | cut -d ',' -f20)";
+    # testcase_cfilter_strategy="$(echo   ${A_bespoke_tests[$p]} | cut -d ',' -f21)";
+    # testcase_cfilter_grepon="$(echo     ${A_bespoke_tests[$p]} | cut -d ',' -f22)";
+
+    # Write to the script each line of the test array that will be run by the cronjob.
+    printf "%s\n" "A_bespoke_tests[$array_count]=\"$(echo ${A_bespoke_tests[$p]} | xargs)\";" >> "${script_path_tmp}"; 
+    ((array_count++));
+done;
+
+# ================================================================
+# [4] Write the rest of the script to the cronjob file.
+
+cat <<EOF >> "${script_path_tmp}"
+
+# ---------------------------------------------------------------
+# [3.1] Get paths to these apps on VM.
+
+vm_cmd_docker=\$(which docker)   || vm_cmd_docker="docker";
+vm_cmd_ping=\$(which ping)       || vm_cmd_ping="ping";
+vm_cmd_bash=\$(which bash)       || vm_cmd_bash="bash";
+vm_cmd_ip=\$(which ip)           || vm_cmd_ip="ip";
+vm_cmd_timeout=\$(which timeout) || vm_cmd_timeout="timeout";
+
+# ---------------------------------------------------------------
+# [3.2] Create array of command paths for each type of container on the VM.
+
+# Check if there is at least one container test to perform.
+loop_containers="false";
+for p in \${!A_cronjob_results[@]}
+do
+    test="\$(echo \${A_cronjob_results[\$p]}  | cut -d ',' -f17 | awk '{\$1=\$1};1')";
+    if [[ \${test} == "c"* ]];then
+        loop_containers="true";
+        break;
+    fi;
+done;
+
+# There is at least one container test to run so loop through all containers to establish the command paths for the following utilities.
+if [[ "\${loop_containers}" == "true" ]];then
+
+    a_containerlist=( \$(\${vm_cmd_docker} ps | awk '{print $1}' | grep -v CONTAINER) );
+
+    for cid in \${a_containerlist[@]}
+    do
+        # Two approaches for identifying the container type as specified in the tests.json.
+        if [[ "\${testcase_cfilter_strategy}" == "container_environment_variable" ]];then
+            cont_type=\$(\${vm_cmd_docker} exec -i \${cid} env | grep \${testcase_cfilter_grepon} | cut -d'=' -f2);
+        elif [[ "\${testcase_cfilter_strategy}" == "container_listing" ]];then
+            cont_type=\$(\${vm_cmd_docker} ps | awk '{print \$1}' | grep -v CONTAINER | grep \${testcase_cfilter_grepon});        
+        fi;
+
+        # Only need one container of each type to establish command paths.
+        if [[ "\${cont_type}" != "" ]];then
+            [[ "\${A_containers[\${cont_type}]+abc}" ]] && exists="true" || exists="false";
+            if [[ "\${exists}" == "false" ]];then
+                container_commands=\$(\${vm_cmd_docker} exec -i \${cid} /usr/bin/which nc ping bash timeout ip);
+                c_cmd_netcat=\$(echo \${container_commands}  | cut -d ' ' -f1);
+                c_cmd_ping=\$(echo \${container_commands}    | cut -d ' ' -f2);
+                c_cmd_bash=\$(echo \${container_commands}    | cut -d ' ' -f3);
+                c_cmd_timeout=\$(echo \${container_commands} | cut -d ' ' -f4);
+                c_cmd_ip=\$(echo \${container_commands}      | cut -d ' ' -f5);
+                A_containers["\${cont_type}"]="\${cid},\${cont_type},\${c_cmd_netcat},\${c_cmd_ping},\${c_cmd_bash},\${c_cmd_timeout},\${c_cmd_ip}";
+            fi;
+        fi;
+    done;
+fi;
+
+# ---------------------------------------------------------------
+# [3.3] This is bespoke code for TC6000 platform only.
+
+if [[ "\${vj_tests_platform}" == "TC6000" ]];then 
+
+    # If oasis then grab container id and check if VM is running the master oasis container.
+    if [[ "\${cont_type}" == "OASIS" ]];then 
+        oa_cid="\${cid}";
+        oa_master=\$(\${vm_cmd_docker} exec -i \${cid} /apps/omn/bin/hci -is_master | grep 'this_is_master: yes');
+        if [[ \${oa_master} == "" ]]; then 
+            oa_master="false"; 
+        else 
+            oa_master="true";
+        fi;
+    fi;
+fi;
+
+# ---------------------------------------------------------------
+# [3.4] Process the bespoke_tests array and run the connectivity test.
+
+for p in \${!A_bespoke_tests[@]}
+do
+    # Reset these for loop iteration.
+    container_id="";
+    container_type="";
+    result="";
+    res="";
+    
+    # Grab each value stored in the array and assign its comma delimitted strings.
+    # - These values are refreshed with each run of the Jenkins pipeline.
+    # - Only the 'iproute_check' + 'iproute_check_count' will be refreshed each time the script is run.
+
+    env="\$(echo                       \${A_bespoke_tests[\$p]} | cut -d ',' -f1)";
+    cluster="\$(echo                   \${A_bespoke_tests[\$p]} | cut -d ',' -f2)";
+    source_hostname="\$(echo           \${A_bespoke_tests[\$p]} | cut -d ',' -f3)";
+    source_domain="\$(echo             \${A_bespoke_tests[\$p]} | cut -d ',' -f4)";
+    target_hostname="\$(echo           \${A_bespoke_tests[\$p]} | cut -d ',' -f5)";
+    target_domain="\$(echo             \${A_bespoke_tests[\$p]} | cut -d ',' -f6)";
+    target_parent="\$(echo             \${A_bespoke_tests[\$p]} | cut -d ',' -f7)";
+    source_pubIp="\$(echo              \${A_bespoke_tests[\$p]} | cut -d ',' -f8)";
+    target_pubIp="\$(echo              \${A_bespoke_tests[\$p]} | cut -d ',' -f9)";
+    source_interface="\$(echo          \${A_bespoke_tests[\$p]} | cut -d ',' -f10)";
+    target_interface="\$(echo          \${A_bespoke_tests[\$p]} | cut -d ',' -f11)";
+    source_gateway="\$(echo            \${A_bespoke_tests[\$p]} | cut -d ',' -f12)";
+    target_gateway="\$(echo            \${A_bespoke_tests[\$p]} | cut -d ',' -f13)";
+    iproute_check="\$(echo             \${A_bespoke_tests[\$p]} | cut -d ',' -f14)"; 
+    iproute_check_count="\$(echo       \${A_bespoke_tests[\$p]} | cut -d ',' -f15)";   
+    testcase_description="\$(echo      \${A_bespoke_tests[\$p]} | cut -d ',' -f16)";
+    test="\$(echo                      \${A_bespoke_tests[\$p]} | cut -d ',' -f17)";
+    testcase_type="\$(echo             \${A_bespoke_tests[\$p]} | cut -d ',' -f18)";
+    testcase_direction="\$(echo        \${A_bespoke_tests[\$p]} | cut -d ',' -f19)";
+    testcase_cfilter_type="\$(echo     \${A_bespoke_tests[\$p]} | cut -d ',' -f20)";
+    testcase_cfilter_strategy="\$(echo \${A_bespoke_tests[\$p]} | cut -d ',' -f21)";
+    testcase_cfilter_grepon="\$(echo   \${A_bespoke_tests[\$p]} | cut -d ',' -f22)";
+
+    # ---------------------------------------------------------------
+    # Get container id and app paths for container tests. 
+    if [[ "\${testcase_cfilter_type}" == "" ]];then
+        container_type="HOST";
+    else
+        container_id="\$(echo   \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f1)";
+        container_type="\$(echo \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f2)";
+        c_cmd_netcat="\$(echo   \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f3)";
+        c_cmd_ping="\$(echo     \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f4)";
+        c_cmd_bash="\$(echo     \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f5)";
+        c_cmd_timeout="\$(echo  \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f6)";
+        c_cmd_ip="\$(echo       \${A_containers[\${testcase_cfilter_type}]} | cut -d ',' -f7)";         
+    fi;
+
+    # ---------------------------------------------------------------
+    # [3.4.1] Bespoke CHECKS for TC6000 platform !!!!!!!
+
+    if [[ "\${vj_tests_platform}" == "TC6000" ]];then 
+
+        # CHECK 1: only run internal docker tests if target is at this time a 'leader' or 'receiver' node.
+        if [[ "\${testcase_type}" == "internal_docker_leader" ]];then
+            is_leader=\$(ssh -o StrictHostKeyChecking=no omndocker@\${target_pubIp} 'docker node inspect self --pretty');
+            if [[ "\${is_leader}" == "" ]];then 
+                ((semicolon_count++));
+                continue;
+            fi;
+
+        # CHECK 2: only run legal interception test if VM is NOT host to the master oasis container.
+        elif [[ "\${testcase_type}" == "li_provisioning" ]] && [[ "\${oa_master}" == "true" ]];then
+            # Advance to next semicoon separated test if exists and jump to next iteration in loop.
+            ((semicolon_count++));
+            continue;
+        fi;
+   
+        # CHECK 3: 'GRUMPY' container routing is different. Jump into these containers to get route rather than using host VM to discover.
+        if [[ "\${vj_tests_platform}" == "TC6000" ]];then
+
+            if [[ "\${testcase_cfilter_type}" == *"GRUMPY"* ]];then
+                
+                iproute_check=\$(\${vm_cmd_docker} exec -i \${container_id} \${c_cmd_ip} route get \${target_pubIp} | grep -v cache | awk {'print \$3,\$5,\$7'});
+            
+            # Check the routing for the target ip from the host VM and non-GRUMPY containers.
+            else
+                iproute_check="\$(\${vm_cmd_ip} route get \${target_pubIp} | grep -v cache | awk {'print \$3,\$5,\$7'})";
+            fi; 
+        fi;
+    fi;
+
+    # ---------------------------------------------------------------
+    # Remove trailing and then leading white space. 
+    # Count substrings. If 2 then no gateway used in ip route. If 3 then gateway is used.
+
+    iproute_check="\${iproute_check#"\${iproute_check%%[![:space:]]*}"}";
+    iproute_check="\${iproute_check%"\${iproute_check##*[![:space:]]}"}"; 
+    iproute_check_count="\$(echo "\${iproute_check}" | tr " " "\n" | wc -l)";
+
+    # This array has a refreshed iproute_check and iproute_check_count values.
+    A_bespoke_tests_refreshed["\${p}"]="\$env,\$cluster,\$source_hostname,\$source_domain,\$target_hostname,\$target_domain,\$target_parent,\$source_pubIp,\$target_pubIp,\$source_interface,\$target_interface,\$source_gateway,\$target_gateway,\$iproute_check,\$iproute_check_count,\$testcase_description,\$test,\$testcase_type,\$testcase_direction,\$testcase_cfilter_type,\$testcase_cfilter_strategy,\$testcase_cfilter_grepon";
+
+    # ---------------------------------------------------------------
+    # Select on the type of test.
+    case "\${test}" in
+
+    # sping: a statistical ping over 10 pings to establish latency average.
+    #   - as it takes longer to run this type of test, the results are posted to a separate prometheus file.
+    # cping: a ping from within a container.
+    # cudp-: a netcat udp test to a port from within a container.
+    # ctcp-: a bash tcp test to a port from within a container.
+    # Equivalant tests without the preceeding 'c' are made from the host VM.
+
+    # ---------------------------------------------------------------
+        "sping")
+            result=\$(\${vm_cmd_ping} -c 10 -W 1 \${target_pubIp}) && res="\${result##*=}"; 
+            res="\${res%\ ms*}"; 
+            res="\${res//\//|}"; 
+            res="\${res#"\${res%%[![:space:]]*}"}"; 
+            pcl="\${result#*received,\ }"; 
+            pcl="\${pcl%%\%*}"; 
+            pcl="\${pcl##*errors,\ }";
+            final_string="\${res}|\${pcl}" || res="\${result##*=}"; 
+            res="\${res%\ ms*}"; 
+            res="\${res//\//|}"; 
+            res="\${res#"\${res%%[![:space:]]*}"}"; 
+            pcl="\${result#*received,\ }"; 
+            pcl="\${pcl%%\%*}"; 
+            pcl="\${pcl##*errors,\ }";
+            # It did not work so set fail string with score of 100. 
+            if [[ "\${res}" == "" ]]; then 
+                final_string="0|0|0|0|100";
+            else
+                final_string="\${res}|\${pcl}";
+            fi; 
+            printf "%s\n" "\${env^^}\${cluster^^}|\${source_pubIp}|\${target_parent^^}|\${target_pubIp}|\${final_string}|sping" >> "${vp_path_file_prometheus_sping_raw}" > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------    
+        "cping")
+            \${vm_cmd_docker} exec -i \${container_id} \${c_cmd_ping} -c 1 \${target_pubIp} > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------    
+        "ping")
+            \${vm_cmd_ping} -c 1 -W 1 \${target_pubIp} > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------
+        cudp-*)
+            target_port=\${test##*-};
+            \${vm_cmd_docker} exec -i \${container_id} \${c_cmd_netcat} -u -z -w 3 \${target_pubIp} \${target_port} > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------
+        udp-*)
+            target_port=\${test##*-};
+            \${vm_cmd_netcat} -v -u -z -w 3 \${target_pubIp} \${target_port} > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------
+        ctcp-*)
+            target_port=\${test##*-};
+            \${vm_cmd_docker} exec -i \${container_id} \${c_cmd_timeout} 1 \${c_cmd_bash} -c "</dev/tcp/\${target_pubIp}/\${target_port}" > /dev/null 2>&1 &
+            ;;
+    # ---------------------------------------------------------------
+        tcp-*)
+            target_port=\${test##*-};
+            \${vm_cmd_timeout} 1 \${vm_cmd_bash} -c "</dev/tcp/\${target_pubIp}/\${target_port}" > /dev/null 2>&1 &
+            ;;        
+    # ---------------------------------------------------------------
+    esac;
+    pid="\${!}";
+    A_results[\$pid]="\${p},\${container_type}";
+done;   
+
+# ---------------------------------------------------------------
+# [3.4] Wait for all pids to finish.
+
+for pid in "\${!A_results[@]}"
+do
+    # Wait for pid to complete.
+    wait "\${pid}";
+    errcode="\${?}";
+    bespoke_tests_refreshed_index="\$(echo "\${A_results[\${pid}]}" | cut -d ',' -f1)";
+    container_type="\$(echo                "\${A_results[\${pid}]}" | cut -d ',' -f2)";
+    
+    env="\$(echo                       "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f1)";
+    cluster="\$(echo                   "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f2)";
+    source_hostname="\$(echo           "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f3)";
+    source_domain="\$(echo             "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f4)";
+    target_hostname="\$(echo           "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f5)";
+    target_domain="\$(echo             "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f6)";
+    target_parent="\$(echo             "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f7)";
+    source_pubIp="\$(echo              "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f8)";
+    target_pubIp="\$(echo              "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f9)";
+    source_interface="\$(echo          "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f10)";
+    target_interface="\$(echo          "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f11)";
+    source_gateway="\$(echo            "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f12)";
+    target_gateway="\$(echo            "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f13)";
+    iproute_check="\$(echo             "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f14)"; 
+    iproute_check_count="\$(echo       "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f15)";   
+    testcase_description="\$(echo      "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f16)";
+    test="\$(echo                      "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f17)";
+    testcase_type="\$(echo             "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f18)";
+    testcase_direction="\$(echo        "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f19)";
+    testcase_cfilter_type="\$(echo     "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f20)";
+    testcase_cfilter_strategy="\$(echo "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f21)";
+    testcase_cfilter_grepon="\$(echo   "\${A_bespoke_tests_refreshed[\${bespoke_tests_refreshed_index}]}" | cut -d ',' -f22)";
+
+    if [[ "\${errcode}" == "0" ]];then
+        score="0";
+    else             
+        score="1";
+    fi;
+    write_prometheus_file "\${score}";
+done;
+
+# ---------------------------------------------------------------
+# [3.5] Copy the tmp files to their final paths.
+
+# Remove the temporary ping stats file if it exists.
+if [[ -f "${vp_path_file_prometheus_sping_raw}" ]];then 
+    rm "${vp_path_file_prometheus_sping_raw}";
+fi;
+
+# Prometheus metric files.
+mv "${vp_path_file_prometheus}.tmp" "${vp_path_file_prometheus}";
+mv "${vp_path_file_prometheus_sping}.tmp" "${vp_path_file_prometheus_sping}";
+chmod +rw "${vp_path_file_prometheus}";
+chmod +rw "${vp_path_file_prometheus_sping}";
+EOF
+
+# Extra step when running remotely.
+if [[ "${vf_framework_flags_behaviour_remotecompute}" == "true" ]];then
+    mv "${script_path_tmp}" "${script_path}";
+fi;
+
+# Make file executable.
+chmod +x "${script_path}";
+};
+
+fp_project_custom_json(){ local key; local value; key="${1}"; value="${2}"; case "${key}" in   "vj_tests"*)     A_variables_tests["${key}"]="${value}";     f_arrays_set_var "${key}" "${value}";     key=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${key}" "_");     f_arrays_set_var "vp_${key}" "${value}";; esac; }; 
+fp_project_custom_runorder(){ case "${vp_stage_number}" in     "HELP")         printf "%b\n" "${yl}--> Info - ${rs}This project's stages can be..";         printf "%b\n" "${yl}--> Info - ${rs} - skipped using the framework's '--SKIPSTAGES' flag. See example above. This overrides other flags.";         printf "%b\n" "${yl}--> Info - ${rs} - changed by passing the project flag '--remotecompute true'.";         printf "%b\n" "${yl}--> Info - ${rs}   - This will copy bash-x to the remote servers and processing will be initiated remotely.";         printf "%b\n" "${yl}--> Info - ${rs}   - This mode has more stages but the processing time is reduced.";         printf "%b\n" "${yl}--> Info - ${rs}   - Both 'local' and 'remote' modes achieve the same outcome.";         ${spacer};;     "2")         f_stages_skip "${vp_help_flags_showstats}" "false";;     "3")         f_stages_skip "${vp_help_flags_remotecompute}" "true";;     "5")         f_stages_skip "${vp_help_flags_remotecompute}" "true";;     "6")         f_stages_skip "${vp_help_flags_remotecompute}" "false";;     "7")         f_stages_skip "${vp_help_flags_remotecompute}" "false";;     "8")            f_stages_skip "${vp_help_flags_remotecompute}" "false";;     "9")            f_stages_skip "${vf_framework_flags_behaviour_tidyup}" "false";;     "10")            f_stages_skip "${vp_help_flags_tidyupproject}" "false";; esac;   };
+fp_project_start_remote(){  f_arrays_paths_clean_project; fp_S0_set_vars; fp_S7_remote_create_logs; exec > >(tee -a "${vp_project_rootpath}input_output/logs/console_${vf_local_hostname_short}.log"); fp_S0_ui_banner; f_stages_loop_remote; exit "${vf_status_exitcode}"; };
+fp_project_start(){  f_arrays_paths_clean_project;   fp_S0_set_vars; f_check_project_checktypes; fp_S0_logs_create; f_utils_logs_rotate "folder_writetime" "${vp_project_rootpath}input_output/" "${vp_help_flags_loglifemins}"; exec > >(tee -a "${vp_path_folder_timestamp_tests_logs}console.log"); fp_S0_ui_banner; f_stages_loop; f_stages_functions_final; };

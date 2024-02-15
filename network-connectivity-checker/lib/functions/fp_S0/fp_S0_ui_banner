@@ -1,0 +1,121 @@
+function fp_S0_ui_banner(){
+
+# About:
+# - Banner that is shown beneath the framework banner.
+# - This is project specific and adapted from the template version of this function.
+
+# Usage:
+# fp_S0_ui_banner;
+# - Add information as below as required to be shown.
+
+local path_short_inventory;
+local path_short_test;
+
+path_short_inventory=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${vp_help_flags_inventory}" "${vf_path_framework_home}"); 
+path_short_tests=$(f_utils_strings_bpe "del_fromleft_upto_including_first" "${vp_help_flags_tests}" "${vf_path_framework_home}"); 
+
+# Display project banner.
+printf "%b\n" "${yl}--> Project name:${cy}         ${vj_project_name}";
+printf "%b\n" "${yl}--> Project repo:${cy}         ${vj_project_repo}";
+printf "%b\n" "${yl}--> Project version:${cy}      ${vj_project_version}${rs}";
+${dashLine};
+${spacer};
+printf "%b\n" "${yl}--> Project started with these passed flags.${rs}";
+${spacer};
+printf "%b\n" "${vf_args_passed}";
+${spacer};
+printf "%b\n" "Note: for '${yl}Flag overide${rs}'";
+printf "%b\n" "--> any passed flags with a different value to the json default will appear as an overide.";
+printf "%b\n" "--> folder paths are amended with a final '/' if not present. Thse will appear as an overide. Check the json!";
+printf "%b\n" "--> project relative paths defined in the json will appear as absolute paths below.";
+printf "%b\n" "--> paths specified with '~/' are resolved using the environment variable \${HOME}.";
+${spacer}; 
+printf '%s\t\t %s\t %s\n' "${cy}Flags (-short --long)" "${yl}Flag overide?" "${rs}Runtime-value";
+${dashLine};
+for i in ${!A_json_help[@]}
+do
+    string="vj_help_flags_";
+    charcount=$(f_utils_strings "count_chars" "${i}" "_");
+    stem=$(echo ${i} | ${vf_cmd_sed} 's/_[^_]*$//');
+
+    if [[ "${i}" == *"${string}"* ]] && [[ "${charcount}" -eq 4 ]] && [[ "${done_array[*]}" != *"${stem}"* ]];then 
+        
+        longflag="$(echo ${i} | cut -f 4 -d_)";
+        shortflag="${A_json_help[${stem}_shortflag]}";
+        about="${A_json_help[${stem}_about]}";
+        default="${A_json_help[${stem}_default]}";
+        type="${A_json_help[${stem}_type]}";
+
+        # This maybe different to the default value if the flag has been passed in.
+        project_var="vp_help_flags_${longflag}";
+
+        # Paths are displayed below as they can span the entire screen. 
+        if [[ "${type}" == *"path_file_local"* ]] || [[ "${type}" == *"path_folder_local"* ]];then
+            A_paths_local["${shortflag},${longflag},${default},${type}"]="${!project_var}";
+        elif [[ "${type}" == *"path_file_remote"* ]] || [[ "${type}" == *"path_folder_remote"* ]];then
+            A_paths_remote["${shortflag},${longflag},${default},${type}"]="${!project_var}";
+        elif [[ "${!project_var}" != "${default}" ]];then
+            printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${!project_var}${rs}"; 
+        else
+            printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${!project_var}";
+        fi;
+        done_array+=( "${stem}" );
+    fi;
+done;
+${dashLine};
+
+printf "%b\n" "${yl}--> Project flags with local paths.${rs}";
+${dashLine};
+for i in ${!A_paths_local[@]}
+do
+    shortflag="$(echo $i | cut -d ',' -f1)";
+    longflag="$(echo $i  | cut -d ',' -f2)";
+    default="$(echo $i   | cut -d ',' -f3)";
+    type="$(echo $i      | cut -d ',' -f4)";
+    flag_value="$(echo ${A_paths_local[$i]})"; 
+    suffix_path="";
+
+    if [[ "${type}" == *"path_file_local_relative_framework"* ]];then
+        suffix_path="${vf_path_framework_home}";
+    elif [[ "${type}" == *"path_file_local_relative_project"* ]];then
+        suffix_path="${vp_project_rootpath}";
+    elif [[ "${type}" == "path_file_local" ]] || [[ "${type}" == "path_folder_local" ]];then
+        
+        # Check for this pattern else do nothing and use absolute path.
+        if [[ "${default}" == *"~/"* ]];then
+        
+            # Strip the tilde and forward slash and swap in the path to the user home.
+            default=$(f_utils_strings_bpe "del_fromleft_upto_including" "${default}" "~/");
+            suffix_path="${HOME}/";
+        fi;
+    fi;
+
+    if [[ "${flag_value}" != "${suffix_path}${default}" ]];then
+        printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${flag_value}${rs}"; 
+    
+    else
+        printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${flag_value}"; 
+
+    fi;
+
+done;
+
+${dashLine};
+printf "%b\n" "${yl}--> Project flags with remote paths.${rs}";
+${dashLine};
+for i in ${!A_paths_remote[@]}
+do
+    shortflag="$(echo $i | cut -d ',' -f1)";
+    longflag="$(echo $i  | cut -d ',' -f2)";
+    default="$(echo $i   | cut -d ',' -f3)";
+    type="$(echo $i      | cut -d ',' -f4)";
+    flag_value="$(echo ${A_paths_remote[$i]})"; 
+
+    if [[ "${flag_value}" != "${default}" ]];then
+        printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${yl}yes" "${flag_value}${rs}"; 
+    else
+        printf '%s\t %-20s\t %s\t\t %s\n' "${cy}-${shortflag}" "--${longflag}" "${rs}no " "${flag_value}"; 
+    fi;
+done;
+${equalsLine};
+};

@@ -1,0 +1,52 @@
+function fp_multipids_create(){
+
+# About:
+# - Loop through array of all source servers.
+# - Extract remote server connection information.
+# - Make this information global and use framework standard naming convention.
+# loop_source_hostname
+# loop_source_domain
+# loop_source_pubIp
+# loop_source_interface
+# loop_source_gateway
+# loop_source_parent
+
+# ---------------------------------------------------------------
+# [1] Declare local scope variables. 
+# - local variables can be used outside of the function by adding them to a global array.
+
+local source_hostname;
+local loop_source_row;
+
+# ---------------------------------------------------------------
+# [2] Loop through the array of all source servers.
+
+# Loop through the list of all source servers in this array.
+#  - A_source_servers["${source_hostname}"]="${value_string}";
+for source_hostname in "${!A_source_servers[@]}"
+do
+    # The complete row of 'loop_source_' values.
+    loop_source_row="${A_source_servers[${source_hostname}]}";
+    
+    # These 'loop_source_' variables are now available to all subsequent multipid functions.
+    # These names are required as some framework functions reference them. 
+    loop_source_hostname="$(echo  ${A_source_servers[${source_hostname}]} | cut -d ',' -f1)";
+    loop_source_domain="$(echo    ${A_source_servers[${source_hostname}]} | cut -d ',' -f2)";
+    loop_source_pubIp="$(echo     ${A_source_servers[${source_hostname}]} | cut -d ',' -f3)";
+    loop_source_interface="$(echo ${A_source_servers[${source_hostname}]} | cut -d ',' -f4)";
+    loop_source_gateway="$(echo   ${A_source_servers[${source_hostname}]} | cut -d ',' -f5)";
+    loop_source_parent="$(echo    ${A_source_servers[${source_hostname}]} | cut -d ',' -f6)";
+
+    # For each source server run the stage functions as a subprocess.
+    # Pipe output to a local 'loop_source_hostname' specific log file.
+    # The >> directs all error messages to the log file. 2>&1 suppresses messages to screen. & runs the command as a subprocess.
+    # For detailed tracing of sub processes enable the tracing flag in framework.json  
+    f_stages_functions "--multipid" >> "${vp_path_folder_timestamp_tests_logs_sublocal}${loop_source_hostname}.log" 2>&1 &
+    pid=${!};
+    
+    # This array will be used by all the other multipid functions.
+    # 'vp_stage_number' is inherited from the function loop running this function.
+    A_stage_pid_details["${pid}_${vp_stage_number}"]="${loop_source_row}";
+
+done;
+};

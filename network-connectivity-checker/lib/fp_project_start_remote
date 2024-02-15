@@ -1,0 +1,59 @@
+function fp_project_start_remote(){ 
+
+# About:
+# - The starting point for the project when run remotely.
+# - When a project is run in remote mode it copies the framework + project to the remote servers.
+# - It then invokes the project on the remote machines and in addition passes the flag '--REMOTECOMPUTE'.
+# - That flag tells the framework to use this function and its resulting different workflow.
+
+# ---------------------------------------------------------------
+# [1] For any project paths defined in help.json or passed as flags.
+# - remove occurences of double forward slashes.
+# - ensure folder paths end with a forward slash.
+
+f_arrays_paths_clean_project;
+
+# ---------------------------------------------------------------
+# [2] Check remote commands are available. TODO This should be part of check stage.
+
+# f_check_project_dependencies_remote "check_cmd_available";   
+
+# ---------------------------------------------------------------
+# [3] Declare project variables required for remote machine execution.
+
+fp_S0_set_vars;
+
+# ---------------------------------------------------------------
+# [4] Create log folders/files and start logging.
+
+# Remote logs are structured differently to local logs. 
+# - They are retrieved and brought back to the local server.
+# - The folders are timestamped on the local server but not on the remote server.
+# - As with the local logs, the screen output on the remote server is written to the console.log file.
+# - The hostname of the remote server is added to the name of the console.log file to distinguish it.
+# - This project does not use subprocesses on remote machines and hence no log setup for this. 
+
+fp_S7_remote_create_logs;
+
+# From now on all screen output is logged to the console log file.
+exec > >(tee -a "${vp_project_rootpath}input_output/logs/console_${vf_local_hostname_short}.log");
+
+# ---------------------------------------------------------------
+# [5] Display the banner - this will be shown in the log file.
+
+fp_S0_ui_banner;
+
+# ---------------------------------------------------------------
+# [6] Call the remote stage(s). 
+
+f_stages_loop_remote;
+
+# ---------------------------------------------------------------
+# [7] Return the exitcode to the awaiting local 'f_multipids_wait' function.
+
+# - Exit codes can pass back only a numeric between 0-255 - e.g. exit 5
+# - The awaiting 'f_multipids_wait' will capture this on the local server.
+# - In the event of a failure, the combination of stage number (added by the awaiting function) and the exit code will resolve to the value in the project's 'error.json'. 
+
+exit "${vf_status_exitcode}";
+};

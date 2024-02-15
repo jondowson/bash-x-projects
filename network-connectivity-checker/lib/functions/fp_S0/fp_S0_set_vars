@@ -1,0 +1,40 @@
+fp_S0_set_vars(){
+
+# About:
+# Assign all variables that can be assigned at this point in the project code.
+# - Variables that are dependent on loops in multipids should be assigned in the 'multipids_create' loop. 
+# - Use 'vp_' as opposed to the 'vj_' versions of the variables as they may have been changed with passed flags by this point.
+# - the 'vp_' ones are altered by any runtime passed flags, wheras the 'vj_' ones are static. 
+
+# Usage:
+# fp_S0_set_vars;
+# - No passed parameters.
+
+# ---------------------------------------------------------------
+# [1] Assign variable that isolates the short tests json file path.
+
+f_arrays_set_var "vp_path_tests_short" "$(f_utils_strings_bpe 'del_fromleft_upto_including' ${vp_help_flags_tests} 'json/tests/')";
+
+# ---------------------------------------------------------------
+# [2] Create variables for the timestamped log folders.
+
+f_arrays_set_var "vp_path_folder_timestamp"                         "${vp_project_rootpath}input_output/${vf_timestamp}/";
+f_arrays_set_var "vp_path_folder_timestamp_tests"                   "${vp_path_folder_timestamp}${vp_path_tests_short}/";
+f_arrays_set_var "vp_path_folder_timestamp_tests_logs"              "${vp_path_folder_timestamp_tests}logs/";
+f_arrays_set_var "vp_path_folder_timestamp_tests_logs_sublocal"     "${vp_path_folder_timestamp_tests_logs}subprocesses_local/";
+f_arrays_set_var "vp_path_folder_timestamp_tests_logs_subremote"    "${vp_path_folder_timestamp_tests_logs}subprocesses_remote/";
+
+# Always include this variable as the framework uses it to resolve the log folder path.
+f_arrays_set_var "vp_path_folder_logs" "${vp_path_folder_timestamp_tests}logs/";
+
+# Remote server paths.
+f_arrays_set_var "vp_path_file_cronjob"              "${vp_help_flags_cspath}${vp_help_flags_csname}";
+f_arrays_set_var "vp_path_file_prometheus"           "${vp_help_flags_prompath}${vp_help_flags_promname}";
+f_arrays_set_var "vp_path_file_prometheus_sping"     "${vp_help_flags_prompath}sping_${vp_help_flags_promname}";
+f_arrays_set_var "vp_path_file_prometheus_sping_raw" "${vp_help_flags_prompath}pingstats_${vp_help_flags_promname}.txt";
+
+# ---------------------------------------------------------------
+# [3] Initialise any project global variables.
+
+f_arrays_set_var "vp_total_test_count" "0";
+};

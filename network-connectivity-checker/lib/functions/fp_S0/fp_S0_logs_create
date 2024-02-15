@@ -1,0 +1,14 @@
+function fp_S0_logs_create(){
+
+# About:
+# Create the folders used for logs and results.
+# The paths are set in 'fp_S0_set_vars'.
+
+# Usage:
+# fp_S0_logs_create;
+
+mkdir -p "${vp_path_folder_timestamp_tests_logs}";
+mkdir -p "${vp_path_folder_timestamp_tests_logs_sublocal}";
+mkdir -p "${vp_path_folder_timestamp_tests_logs_subremote}";
+touch    "${vp_path_folder_timestamp_tests_logs}console.log";
+};

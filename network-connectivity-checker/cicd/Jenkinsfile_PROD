@@ -1,0 +1,135 @@
+pipeline{
+  agent { 
+    docker{
+      label 'smsc-stag||smsc-prod'
+      image 'smsc-bash-x:latest'
+      registryUrl 'https://css-docker.artifactory.swisscom.com'
+      registryCredentialsId 'artifactory-css'
+      alwaysPull true
+    }
+  }
+  environment {
+    BITBUCKET_COMMON_CREDS = credentials('artifactory-css')
+  }
+  stages {
+    stage('Select branch and environment to deploy'){
+        steps {
+            sh "rm -f branches.txt && git branch -r | sort -r > branches.txt"
+            sh "sed -i '1s/^/bash-x\\/master\\n/' branches.txt"
+            script{
+                featurebranchlist = readFile 'branches.txt'
+                timeout(time: 300, unit: 'SECONDS'){
+                  deploymentparam = input message: 'Please choose the branch to deploy', ok: 'Ok',
+                                      parameters: [ 
+                                                    choice(choices: 'prod', description: '', name: 'env'),
+                                                    choice(choices: "${featurebranchlist}", name: 'branch') 
+                                                  ]
+                }
+                env.BRANCH = deploymentparam.branch.replaceAll(" ","");
+            }
+        }
+    }
+    stage("Make user selections"){
+      steps{
+        sh "pwd; ls -la";
+        sh "git checkout -b + ${env.BRANCH}";
+        sh "rm -rf inventory.txt && find inventory/TC6000/prod -type f -name '*.json' > inventory.txt";
+        sh "rm -rf tests.txt && find projects/network-connectivity-checker/json/tests/TC6000/prod -type f -name '*.json' > tests.txt";
+        script {
+          inventoryList = readFile 'inventory.txt'
+          testsList   = readFile 'tests.txt'
+          timeout(time: 300, unit: 'SECONDS'){
+            deploymentparam = input message: 'Pipeline options...', ok: 'Ok',
+                                parameters: [ choice(choices: "${inventoryList}",description: 'Required: The inventory json file to use.', name: 'inventory'),
+                                              choice(choices: "${testsList}",    description: 'Required: The tests json file to use.', name: 'tests'),
+                                              choice(choices: ['false','true'],  description: 'Optional: Delete bash-x folder from remote VMs.', name: 'tidyup'),
+                                              choice(choices: ['false','true'],  description: 'Optional: Delete checkerscript + prometheus files from remote VMs.', name: 'tidyupproject'),
+                                              choice(choices: ['true', 'false'], description: 'Optional: Display output using colors.', name: 'colordisplay'),
+                                              choice(choices: ['false','true'],  description: 'Optional: Display stats and tests (nice but takes longer).', name: 'showstats'),
+                                              choice(choices: ['','--FASTFAIL'], description: 'Optional: Select flag to exit project on first failure.', name: 'fastfail') ,
+                                              string(defaultValue: '', description: 'Optional: Limit with a comma separated string. E.g: for cluster1 and tcsmsc-21 only: \'tcsmsc-stag1,tcsmsc-stag21\'', name: 'limit'),
+                                              string(defaultValue: '', description: 'Optional: Skip stages. For example, if removing framework and project files, only run stages 1,6 and 7. Skip: \'2,3,4,5\'', name: 'skipstages') ]
+          }
+          env.DEPLOY = 'prod';
+          env.INVENTORY = deploymentparam.inventory;
+          env.TESTS = deploymentparam.tests;
+          env.TIDYUP = deploymentparam.tidyup;
+          env.TIDYUPPROJECT = deploymentparam.tidyupproject;
+          env.FASTFAIL = deploymentparam.fastfail;
+          env.COLORDISPLAY = deploymentparam.colordisplay;
+          env.SHOWSTATS = deploymentparam.showstats;
+          env.LIMIT = deploymentparam.limit.replaceAll("[\\t\\n\\r]+",",");
+          env.SKIPSTAGES = deploymentparam.skipstages.replaceAll("[\\t\\n\\r]+",",");
+
+          if (env.LIMIT != '') {
+            env.LIMIT = '--LIMIT '+ env.LIMIT
+          }
+
+          if (env.SKIPSTAGES != '') {
+            env.SKIPSTAGES = '--SKIPSTAGES '+ env.SKIPSTAGES
+          }
+
+        }
+        ansiColor('xterm'){
+          echo "**********************************************************";
+          echo 'Jenkins JOB_BASE_NAME: '+ env.JOB_BASE_NAME
+          echo 'Jenkins JOB_NAME:      '+ env.JOB_NAME
+          echo 'Environment:           '+ env.DEPLOY
+          echo 'Git branch:            '+ env.BRANCH
+          echo "**********************************************************";
+          echo "Running the 'bash-x' bash framework:"
+          echo 'Framework flags:'
+          echo '--PROJECT              network-connectivity-checker'
+          echo '--AUTHAPPROACH         jenkins_user_pass' 
+          echo '--COLORDISPLAY         '+ env.COLORDISPLAY
+          echo '--FASTFAIL             '+ env.FASTFAIL
+          echo '--LIMIT                '+ env.LIMIT
+          echo '--SKIPSTAGES           '+ env.SKIPSTAGES
+          echo '--SSHINTERFACE         omn' 
+          echo '--SSHTARGETPATH        /home/omndocker/' 
+          echo '--SSHUSER              omndocker' 
+          echo 'Project flags:'
+          echo '--inventory            '+ env.INVENTORY
+          echo '--tests                '+ env.TESTS
+          echo '--tidyup               '+ env.TIDYUP
+          echo '--tidyupproject        '+ env.TIDYUPPROJECT
+          echo '--showstats            '+ env.SHOWSTATS
+          echo '--csname               network_connectivity_checker_cronjob.bash' 
+          echo '--cspath               /home/omndocker/scripts/'
+          echo '--promname             network_connectivity_checker.prom'
+          echo '--prompath             /var/lib/prometheus/textfile_collector/'  
+          echo "**********************************************************";
+        }
+        script{
+          timeout(time: 300, unit: 'SECONDS'){input message: 'OK to proceed?', ok: 'Ok'}
+        }
+        sh ("rm -rf inventory.txt tests.txt branches.txt")
+        withCredentials([usernamePassword(credentialsId: "smsc-tc6000-omndocker-prod", passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+        sh("./lib/bash-x --PROJECT network-connectivity-checker \
+        --COLORDISPLAY ${env.COLORDISPLAY} \    
+        --AUTHAPPROACH jenkins_user_pass \
+        --SSHUSER omndocker \
+        --SSHTARGETPATH /home/omndocker/ \
+        --SSHINTERFACE omn \
+        ${env.LIMIT} \
+        ${env.SKIPSTAGES} \
+        ${env.FASTFAIL} \
+        --inventory ${env.INVENTORY} \
+        --tests ${env.TESTS} \
+        --tidyup ${env.TIDYUP} \
+        --tidyupproject ${env.TIDYUPPROJECT} \
+        --showstats ${env.SHOWSTATS} \
+        --csname network_connectivity_checker_cronjob.bash \
+        --cspath /home/omndocker/scripts/ \
+        --promname network_connectivity_checker.prom \
+        --prompath /var/lib/prometheus/textfile_collector/")
+        }
+      }
+    }
+  }
+  post{
+    always{
+      cleanWs()
+    }
+  }
+}

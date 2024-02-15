@@ -1,0 +1,36 @@
+function fp_multipids_wait(){
+
+# Loop through each pid.
+for pid_stage in "${!A_stage_pid_details[@]}"
+do
+  pid="$(echo ${pid_stage}     | cut -d '_' -f1)";
+  stageid="$(echo ${pid_stage} | cut -d '_' -f2)";
+
+  if [[ "${vp_stage_number}" == "${stageid}" ]];then
+  
+    # [1] If pid is still running wait for it to complete.
+    if wait $pid; then
+      errcode="${?}";
+      if [[ "${errcode}" == "0" ]];then
+        a_stage_pid_success+=("${pid}_${vp_stage_number}");
+      else              
+        json_err_code="errors_s${vp_stage_number}_e${errcode}";
+        json_err_message="vj_${json_err_code}_message";
+        json_err_hint="vj_${json_err_code}_hint";
+
+        A_stage_pid_fails["${pid}_${vp_stage_number}"]="${json_err_code},${!json_err_message},${!json_err_hint}";
+        f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "${errcode}" "${pid}";  
+      fi;
+      
+    # [2] If pid has finished with a fail. 
+    else
+      errcode="${?}";    
+      json_err_code="errors_s${vp_stage_number}_e${errcode}";
+      json_err_message="vj_${json_err_code}_message";
+      json_err_hint="vj_${json_err_code}_hint";
+      A_stage_pid_fails["${pid}_${vp_stage_number}"]="${json_err_code},${!json_err_message},${!json_err_hint}";
+      f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "${errcode}" "${pid}";  
+    fi;
+  fi;
+done;
+};

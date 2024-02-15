@@ -1,0 +1,23 @@
+function fp_S1_loop_children_elements(){
+
+local test_string;
+local key;
+local g t c p e;
+
+test_string="${1}";
+g="${2}";
+t="${3}";
+p="${4}";
+c="${5}";
+e="1";
+
+for key in "${!A_variables_inventory[@]}"
+do  
+    if [[ "${key}" == *"${test_string}"* ]] && [[ "${A_variables_inventory[$key]}" != "" ]] && \
+       [[ "${key}" != *"_domain" ]] && [[ "${key}" != *"_interface" ]] && [[ "${key}" != *"_gateway" ]];then     
+
+        fp_S1_array_write_tests_fromto "${key}" "${g}" "${t}" "${p}" "${c}" "${e}";   
+        ((e++));
+    fi;
+done;
+};

@@ -1,0 +1,100 @@
+function fp_S3_write_script_loop_tests(){
+
+# This array needs to be declared here and not arrays.json 
+# It is used for multiple sub processes and we do not want it being overwritten.
+declare -A A_bespoke_tests;
+for i in "${!A_tests_to_all[@]}"
+do
+
+    # Grab comma delimited values from current array value. Remove any escape chars from string.
+    source_hostname="$(echo ${A_tests_to_all[$i]} | cut -d ',' -f1)"; 
+
+    # Filter only for the source server in the calling loop.
+    if [[ "${loop_source_hostname}" == "${source_hostname}" ]];then
+
+        # The testcase_ elements are repeated for source and target servers.
+        source_hostname="$(echo ${A_tests_to_all[$i]}           | cut -d ',' -f1)";
+        source_domain="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f2)";
+        source_pubIp="$(echo ${A_tests_to_all[$i]}              | cut -d ',' -f3)";
+        source_interface="$(echo ${A_tests_to_all[$i]}          | cut -d ',' -f4)";
+        source_gateway="$(echo ${A_tests_to_all[$i]}            | cut -d ',' -f5)";
+        source_parent="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f6)";
+        testcase_description="$(echo ${A_tests_to_all[$i]}      | cut -d ',' -f7)";
+        testcase_test="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f8)";
+        testcase_type="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f9)";
+        testcase_direction="$(echo ${A_tests_to_all[$i]}        | cut -d ',' -f10)";
+        testcase_cfilter_type="$(echo ${A_tests_to_all[$i]}     | cut -d ',' -f11)";
+        testcase_cfilter_strategy="$(echo ${A_tests_to_all[$i]} | cut -d ',' -f12)";
+        testcase_cfilter_grepon="$(echo ${A_tests_to_all[$i]}   | cut -d ',' -f13)";
+        target_hostname="$(echo ${A_tests_to_all[$i]}           | cut -d ',' -f14)";
+        target_domain="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f15)";
+        target_pubIp="$(echo ${A_tests_to_all[$i]}              | cut -d ',' -f16)";
+        target_interface="$(echo ${A_tests_to_all[$i]}          | cut -d ',' -f17)";
+        target_gateway="$(echo ${A_tests_to_all[$i]}            | cut -d ',' -f18)";
+        target_parent="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f19)";
+        
+        #testcase_description="$(echo ${A_tests_to_all[$i]}      | cut -d ',' -f20)";
+        #testcase_test="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f21)";
+        #testcase_type="$(echo ${A_tests_to_all[$i]}             | cut -d ',' -f22)";
+        #testcase_direction="$(echo ${A_tests_to_all[$i]}        | cut -d ',' -f23)";
+        #testcase_cfilter_type="$(echo ${A_tests_to_all[$i]}     | cut -d ',' -f24)";       
+        #testcase_cfilter_strategy="$(echo ${A_tests_to_all[$i]} | cut -d ',' -f25)";
+        #testcase_cfilter_grepon="$(echo ${A_tests_to_all[$i]}   | cut -d ',' -f26)";  
+
+        # This requires that grouping has format string with no embeded digits.
+        # E.g. 'Stag123' and 'Prod1' are good. But 'St2ag123' is bad.
+        env=$(echo ${source_parent} | grep -o '.*[^0-9]');
+        cluster=$(echo ${source_parent//[!0-9]/});
+
+        # ================================================================
+        # [2] Loop through each test for the testcase. Multiple tests are semicolon delimited. Add these to an ordered array.
+
+        # Count how many semicolons are in the testcase string.
+        test_semicolon_count=$(f_utils_strings "count_chars" "${testcase_test}" ";");    
+        semicolon_count=0;
+
+        # Loop through each semicolon delimited test that exists for this testcase. 
+        # A testcase with a single test (i.e. no semicolons) will run the loop once.
+        until [ "${semicolon_count}" -gt ${test_semicolon_count} ]
+        do
+        
+            # If testcase has a semicolon separated string grab the test in focus for this loop iteration.
+            if [[ "${test_semicolon_count}" -gt 0 ]];then 
+                test=$(echo "${testcase_test}" | cut -d ";" -f"$((semicolon_count+1))");
+            else
+                test="${testcase_test}";
+            fi;
+
+            # Create random unique index for array. The sleep time is irrelevant.
+            sleep 0.1 &
+            pid="${!}";
+
+            # This array will be used to write out all the tests into thge generated script.
+            # Note iproute_check and iproute_check_count are initially blank.
+            # But will be refreshed when the generated script is run.
+
+            value_string="${env},${cluster},\
+                ${source_hostname},${source_domain},\
+                ${target_hostname},${target_domain},${target_parent},\
+                ${source_pubIp},${target_pubIp},\
+                ${source_interface},${target_interface},\
+                ${source_gateway},${target_gateway},\
+                ${iproute_check},${iproute_check_count},\
+                ${testcase_description},${test},${testcase_type},\
+                ${testcase_direction},${testcase_cfilter_type},\
+                ${testcase_cfilter_strategy},${testcase_cfilter_grepon}";
+
+            # Remove any whitespaces from the strings, except for testcase_description.
+            value_string=$(echo "${value_string}" | ${vf_cmd_sed} 's/[[:space:]]//g');
+            value_string=$(echo "${value_string}" | awk -F, -v OFS=, -v newval="${testcase_description}" '{$16=newval; print}');
+
+            A_bespoke_tests[$pid]="${value_string}";
+            # Advance to next test in testcase.
+            ((semicolon_count++));
+        done;
+    fi;
+done;
+# This message will appear in the subprocess log files for each remote server.
+printf "%b\n" "Writing connectivity test script for remote server: ${loop_source_hostname}";
+fp_S3_write_script_heredoc;
+};

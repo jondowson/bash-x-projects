@@ -1,0 +1,376 @@
+{
+    "tests":{
+        "name":                 "TC6000_REF",
+        "platform":             "TC6000",
+        "environment":          "ref",
+        "description":          "Tests over all interfaces for TC6000 VMs in reference environment.",
+        "notes":{
+            "from":             "The servers from where the tests are run as defined in the inventory.json.",
+            "to":               "The target servers where the connection test are to be run to as defined in the inventory.json.",
+            "test":             "tcp-port, udp-port, ping, sping (statistical ping run over x seconds). Prefix with c to denote source as a container(e.g. ctcp-443)",
+            "type":             "Used as a label for logic and Grafana prometheus queries.",
+            "direction":        "Used as a label for Grafana to indicate direction of traffic with format: interface-identifier_relevant-tag",
+            "cfilter_type":     "Limit container tests to a particular container type. Leave blank if not used.",
+            "cfilter_strategy": "How to identify container on the VM. 'container_environment_variable' or 'container_listing' or leave blank if not used.",
+            "cfilter_grepon":   "What env variable to match with strategy 'container_environment_variable' or how to filter 'container_listing' to desired type."
+
+        },              
+        "group1":{
+            "interface":        "eth0",
+            "description":      "The default interface.",  
+            "t1":{
+                "description":  "Virtual vRAMS USSD from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_v-rams_ussd}",
+                "test":         "tcp-12850",
+                "type":         "default_vrams_ussd",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }     
+            },
+            "t2":{
+                "description":  "SIS MSISDN and subscription lookups for post or prepaid accounts from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_sis}",
+                "test":         "tcp-8180;tcp-8181",
+                "type":         "default_sis_ussd",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t3":{
+                "description":  "SRS voucher reloads from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_srs}",
+                "test":         "tcp-8082",
+                "type":         "default_srs_ussd",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }     
+            },
+            "t4":{
+                "description":  "Service VIP of cluster from each VM in same cluster.",
+                "from":         "{inventory_servers_ref1_service_default}{inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_vips_default_tcsmsc-srv1p}{inventory_services_swisscom_vips_default_tcsmsc-srv2p}",
+                "test":         "tcp-8086;tcp-8087;tcp-2222",
+                "type":         "default_colibri_soap_cluster_same",
+                "direction":    "in",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }     
+            },
+            "t5":{
+                "description":  "Service VIP of cluster from each VM in other cluster.",
+                "from":         "{inventory_servers_ref1_service_default}{inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_vips_default_tcsmsc-srv2p}{inventory_services_swisscom_vips_default_tcsmsc-srv1p}",
+                "test":         "tcp-8086;tcp-8087;tcp-2222",
+                "type":         "default_colibri_soap_cluster_other",
+                "direction":    "in",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            },
+            "t6":{
+                "description":  "SMPP from each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_ref1_service_default}{inventory_servers_ref2_service_default}",
+                "to":           "{inventory_servers_ref1_service_default}{inventory_servers_ref2_service_default}",
+                "test":         "tcp-6010;tcp-6012;tcp-6013;tcp-6014;tcp-6018",
+                "type":         "default_esme_mpro_cluster_same",
+                "direction":    "in",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            },
+            "t7":{
+                "description":  "DNS from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_dns}",
+                "test":         "tcp-53",
+                "type":         "default_dns",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            },
+            "t8":{
+                "description":  "S3 storage config backup from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_apps_s3appcloud}",
+                "test":         "tcp-443",
+                "type":         "default_s3",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t9":{
+                "description":  "MSC shipment company whitelist from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_pfs}",
+                "test":         "tcp-8080",
+                "type":         "default_msc",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            },
+            "t10":{
+                "description":  "AMS file server from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_default,inventory_servers_ref2_service_default}",
+                "to":           "{inventory_services_swisscom_ams}",
+                "test":         "tcp-22",
+                "type":         "default_ams_cdr",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            }
+        },
+        "group2":{
+            "interface":        "eth1",
+            "description":      "The omn interface.",
+            "t1":{
+                "description":  "Each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_ref1_service_omn}{inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_servers_ref1_service_omn}{inventory_servers_ref2_service_omn}",
+                "test":         "tcp-22",
+                "type":         "omn_cluster_same",
+                "direction":    "both",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t2":{
+                "description":  "Each VM to each other VM in the other cluster",
+                "from":         "{inventory_servers_ref1_service_omn}{inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_servers_ref2_service_omn}{inventory_servers_ref1_service_omn}",
+                "test":         "tcp-22",
+                "type":         "omn_cluster_other",
+                "direction":    "both",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t3":{
+                "description":  "Artifactory from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_omn,inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_services_swisscom_apps_artifactory,inventory_services_swisscom_apps_bin}",
+                "test":         "tcp-443",
+                "type":         "omn_artifactory",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }  
+            },
+            "t4":{
+                "description":  "Kudos-proxy server for image downloads from each VM in each cluster.",  
+                "from":         "{inventory_servers_ref1_service_omn,inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_servers_kp}",
+                "test":         "tcp-22",
+                "type":         "omn_kp",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }  
+            },
+            "t5":{
+                "description":  "OMN Gui vip from each VM in same cluster.",
+                "from":         "{inventory_servers_ref1_service_omn}{inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_services_swisscom_vips_omn_omn-ep1}{inventory_services_swisscom_vips_omn_omn-ep2}",
+                "test":         "tcp-8888",
+                "type":         "omn_gui_vip",
+                "direction":    "in",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t6":{
+                "description":  "Splunk from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_omn,inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_services_swisscom_apps_splunk}",
+                "test":         "tcp-8090",
+                "type":         "omn_splunk",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            },
+            "t7":{
+                "description":  "NTP time service from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_omn,inventory_servers_ref2_service_omn}",
+                "to":           "{inventory_services_swisscom_ntp}",
+                "test":         "ping",
+                "type":         "omn_ntp",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            }
+        }, 
+        "group3":{
+            "interface":        "eth2",
+            "description":      "Using the sigtran_css1 interface on each VM.",
+            "t1":{
+                "description":  "All the REF VMs to the correct stpa endpoints. Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_ref1_service_sigtran_css1,inventory_servers_ref2_service_sigtran_css1}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep1}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "GRUMPY",
+                    "strategy": "container_environment_variable",
+                    "grepon":   "CONT_TYPE"
+                }   
+            }
+        },
+        "group4":{
+            "interface":        "eth3",
+            "description":      "Using the sigtran_css2 interface on each VM. Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+            "t1":{
+                "description":  "All the REF VMs to the correct stpb endpoints. Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_ref1_service_sigtran_css1,inventory_servers_ref2_service_sigtran_css1}",
+                "to":           "{inventory_services_swisscom_stpa_stpb-ep1}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "GRUMPY",
+                    "strategy": "container_environment_variable",
+                    "grepon":   "CONT_TYPE"
+                }    
+            }
+        },
+        "group5":{
+            "interface":        "eth4",
+            "description":      "The internal interface.",
+            "t1":{
+                "description":  "Each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_ref1_service_internal}{inventory_servers_ref2_service_internal}",
+                "to":           "{inventory_servers_ref1_service_internal}{inventory_servers_ref2_service_internal}",
+                "test":         "tcp-22",
+                "type":         "internal_ssh",
+                "direction":    "both",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            },
+            "t2":{
+                "description":  "Each VM to each other VM within the same cluster. Docker swarm network discovery rest api and rpc interface. Port 2337 tests are only for target nodes with Leader or Reachable status.",
+                "from":         "{inventory_servers_ref1_service_internal}{inventory_servers_ref2_service_internal}",
+                "to":           "{inventory_servers_ref1_service_internal}{inventory_servers_ref2_service_internal}",
+                "test":         "tcp-7946;tcp-2375;ltcp-2377",
+                "type":         "internal_docker",
+                "direction":    "both",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }  
+            }
+        },
+        "group6":{
+            "interface":        "eth5",
+            "description":      "The sip interface.",
+            "t1":{
+                "description":  "Sip virtual IMS s-scsf from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_sip,inventory_servers_ref2_service_sip}",
+                "to":           "{inventory_services_swisscom_s-cscf}",
+                "test":         "tcp-5060",
+                "type":         "sip_vims_scscf",
+                "direction":    "both",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            }
+        },
+        "group7":{
+            "interface":        "eth6",
+            "description":      "The legal interception (li) interface.",
+            "t1":{
+                "description":  "The LI service from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_li,inventory_servers_ref2_service_li}",
+                "to":           "{inventory_services_swisscom_li}",
+                "test":         "tcp-20593",
+                "type":         "li_sms_interception",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }  
+            },
+            "t2":{
+                "description":  "The LI service VIP can be reached from each cluster.",
+                "from":         "{inventory_servers_ref1_service_li,inventory_servers_ref2_service_li}",
+                "to":           "{inventory_services_swisscom_vips_li}",
+                "test":         "tcp-8090",
+                "type":         "li_provisioning",
+                "direction":    "in",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }    
+            }
+        },
+        "group8":{
+            "interface":        "eth7",
+            "description":      "The gy interface.",
+            "t1":{
+                "description":  "vRAMS realtime for charging from each VM in each cluster.",
+                "from":         "{inventory_servers_ref1_service_gy,inventory_servers_ref2_service_gy}",
+                "to":           "{inventory_services_swisscom_rams_realtime}",
+                "test":         "tcp-12615;tcp-12611",
+                "type":         "gy_vrams",
+                "direction":    "out",
+                "cfilter": {
+                    "type":     "",
+                    "strategy": "",
+                    "grepon":   ""
+                }   
+            }
+        }              
+    }
+}

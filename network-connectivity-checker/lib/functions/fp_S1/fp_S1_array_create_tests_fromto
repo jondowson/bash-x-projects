@@ -1,0 +1,190 @@
+function fp_S1_array_create_tests_fromto(){
+
+# About:
+# - This function loops through the tests json and creates the array 'A_tests_fromto'.
+
+# ---------------------------------------------------------------
+# [1] Declare function vars.
+
+# These variables are used only within this function and so are declared as local.
+local param_array=("from" "to");
+
+local to_left_parenth_count;
+local to_right_parenth_count;
+local from_left_parenth_count;
+local from_right_parenth_count;
+
+local tests_parentheses_string;
+local tests_parentheses_substring;
+local tests_parentheses_string_semicolon_count;
+local tests_parentheses_substring;
+local tests_parentheses_substring_value;
+local tests_parentheses_string_value;
+
+local key_parent;
+local key_hostname;
+local domain;
+
+local g t c p e;
+
+# This variable is used in other functions so not declared local.
+f_arrays_set_var "vp_target_parentheses" "";
+
+# ---------------------------------------------------------------
+# [2] Loop through all the 'from' and 'to' fields for each test. 
+
+# The tests json has 'from' and 'to' tags.
+# This function populates the array 'A_tests_fromto'. 
+# The array has a unique key that represents each test that goes from a server and to a server.
+
+# The array entry below represents the test as defined in the 'from' tag:
+# - i.e. from (not to), group1, test1, parenthesis1, string before comma1 and element1.
+# A_tests_fromto[from_g1_t1_p1_c1_e1]="tcsmsc-prod11,.sharedtcs.net,100.110.16.36, \
+#                                      eth0,100.110.16.33,prod1, \
+#                                      Virtual vRAMS USSD from each VM in each cluster.,tcp-12850, \
+#                                      default_vrams_ussd,out,na";
+
+# element1 refers to the first child that falls under this inventory element.
+# - i.e. the first child element of 'inventory_servers_prod1_service_default' is 'tcsmsc-prod11'. 
+
+# The same process happens for all the target inventory elements defined in the 'to' field.
+# From this array two arrays are created - one for all tests from and one for all tests to.
+# - Its uses the key e.g. 'from_g1_t1_p1_c1_e1' and 'to_g1_t1_p1_c1_e1' to identify which tests should be attributed to each source server.
+
+for vp_target_parentheses in ${param_array[@]}
+do
+
+# ---------------------------------------------------------------
+# [3] Loop through the groups 'g'.  
+
+    g=0;
+    while true; 
+    do
+        ((g++));
+        tests_parentheses="${A_variables_tests["vj_tests_group${g}_t1_${vp_target_parentheses}"]}";
+        # Break out of first inner loop if group does not exist.
+        if [[ ${tests_parentheses} == "" ]];then
+            break;
+        
+# ---------------------------------------------------------------
+# [4] Loop through the tests 't'. 
+
+        else 
+            t=0;
+            while true; 
+            do
+                ((t++));
+                # Check if a test exists at this loop number.
+                tests_parentheses="${A_variables_tests["vj_tests_group${g}_t${t}_${vp_target_parentheses}"]}";
+                testcase_description="${A_variables_tests["vj_tests_group${g}_t${t}_description"]}";
+                testcase_test="${A_variables_tests["vj_tests_group${g}_t${t}_test"]}";
+                testcase_type="${A_variables_tests["vj_tests_group${g}_t${t}_type"]}";
+                testcase_direction="${A_variables_tests["vj_tests_group${g}_t${t}_direction"]}";
+                testcase_cfilter_type="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_type"]}";
+                testcase_cfilter_strategy="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_strategy"]}";
+                testcase_cfilter_grepon="${A_variables_tests["vj_tests_group${g}_t${t}_cfilter_grepon"]}";
+
+                # If cfilter exists for this test then escape it.
+                if [[ "${testcase_cfilter_type}" != "" ]];then 
+                    testcase_cfilter_type="$(f_utils_strings_printf     "escape_string" "${testcase_cfilter_type}")";
+                    testcase_cfilter_strategy="$(f_utils_strings_printf "escape_string" "${testcase_cfilter_strategy}")";
+                    testcase_cfilter_grepon="$(f_utils_strings_printf   "escape_string" "${testcase_cfilter_grepon}")";
+                else
+                    testcase_cfilter_type="";
+                fi;
+
+                # Break out if test does not exist.
+                if [[ ${tests_parentheses} == "" ]];then
+                    break;
+                else
+                    # Check for correct syntax in the tests json.
+                    to_left_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_to"]}" "{");
+                    to_right_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_to"]}" "}");
+                    from_left_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" "{");
+                    from_right_parenth_count=$(f_utils_strings "count_chars" "${A_variables_tests["vj_tests_group${g}_t${t}_from"]}" "}");
+                    
+                    if [[ "${to_left_parenth_count}" != "${to_right_parenth_count}" ]] || [[ "${from_left_parenth_count}" != "${from_right_parenth_count}" ]];then
+                        f_arrays_set_var "vp_dynamic_error_msg" "Group ${g}, Test ${t}";
+                        f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";
+                        f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "3"; 
+                    
+                    elif [[ "${to_left_parenth_count}" != "${from_left_parenth_count}" ]];then
+                        f_arrays_set_var "vp_dynamic_error_msg" "Group ${g}, Test ${t}";
+                        f_arrays_set_var "vf_framework_flags_behaviour_fastfail" "true";
+                        f_errors_exitmessages "${FUNCNAME[0]}: $((LINENO))" "3"; 
+
+                    else 
+# ---------------------------------------------------------------
+# [5] Loop through the one or more parentheses 'p'. {aaa,bbb}{ccc,ddd}{eee}                    
+                        p=1;
+                        
+                        until [ "${p}" -gt $((to_left_parenth_count)) ]
+                        do
+                            # Grab the entire string between the opening and closing parentheses currently in focus in the loop.
+                            tests_parentheses_string=$(echo "${tests_parentheses}" | cut -d "{" -f$((p+1)) | cut -d "}" -f1);
+                            
+                            # Check if the entire string itself contains comma delimited substrings.
+                            tests_parentheses_string_comma_count=$(f_utils_strings "count_chars" "${tests_parentheses_string}" ",");
+
+                            # Does the string between the parenthesis contain multiple strings. 
+                            if [[ "${tests_parentheses_string_comma_count}" -eq "0" ]];then 
+                                
+                                # Prepend 'vj_' as this has been added to each element when converted to bash variable. 
+                                # The definition in the tests json file does not include this.
+                                tests_parentheses_string_value="${A_variables_inventory[vj_${tests_parentheses_string}]}";
+                                
+                                # If test has a direct value then write to array.
+                                # i.e. a test that specifies a server directly rather than the card for its cluster.
+                                # e.g. 'inventory_servers_stag1_service_internal_tcsmsc-stag11'.
+                                if [[ "${tests_parentheses_string_value}" != "" ]];then
+                                    c=1;
+                                    e=1;
+                                    fp_S1_array_write_tests_fromto "vj_${tests_parentheses_string}" "${g}" "${t}" "${p}" "${c}" "${e}";
+                                else
+                                    # If test has no direct value then loop through its child elements.
+                                    # i.e. specifying a cluster of servers rather than specifying an individual one.
+                                    # e.g. 'inventory_servers_stag1_service_omn'.
+                                    c=1;
+                                    fp_S1_loop_children_elements "vj_${tests_parentheses_string}" "${g}" "${t}" "${p}" "${c}";
+                                fi;
+
+# ---------------------------------------------------------------
+# [6] Loop through the comma delimited substrings 'c'. {aaa,bbb,ccc}{ddd,eee,fff}
+                            else
+                            
+                                c=0;
+                                # If no commas, then the loop will run once.
+                                until [ "${c}" -gt $((tests_parentheses_string_comma_count)) ]
+                                do
+                                    tests_parentheses_substring=$(echo "${tests_parentheses_string}" | cut -d "," -f"$((c+1))");
+
+                                    # Prepend 'vj_' as this has been added to each element when converted to bash variable. 
+                                    # The definition in the tests json file does not include this.
+                                    tests_parentheses_substring_value="${A_variables_inventory[vj_${tests_parentheses_substring}]}";
+                                    
+                                    # If test has a direct value then write to array.
+                                    # i.e. specifying a server directly rather than its cluster.
+                                    # e.g. 'inventory_servers_stag1_service_internal_tcsmsc-stag11'.
+                                    if [[ "${tests_parentheses_substring_value}" != "" ]];then
+                                        e=1;
+                                        fp_S1_array_write_tests_fromto "vj_${tests_parentheses_substring}" "${g}" "${t}" "${p}" "$((c+1))" "${e}";
+                                    else 
+                                        # If test has no direct value then loop through its child elements.
+                                        # i.e. specifying a cluster of servers rather than specifying an individual one.
+                                        # e.g. 'inventory_servers_stag1_service_omn'.
+                                        fp_S1_loop_children_elements "vj_${tests_parentheses_substring}" "${g}" "${t}" "${p}" "$((c+1))";
+                                    fi;
+                                    # Advance the comma count.
+                                    ((c++));
+                                done;
+                            fi;
+                            # Advance the parentheses count.
+                            ((p++));
+                        done;
+                    fi;
+                fi;
+            done;
+        fi;
+    done;
+done;
+};

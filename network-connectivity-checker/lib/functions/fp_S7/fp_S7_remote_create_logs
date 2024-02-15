@@ -1,0 +1,9 @@
+function fp_S7_remote_create_logs(){
+
+# Safely clear any existing logs from remote machine.
+if [[ -d "${vp_project_rootpath}input_output/logs/" ]];then
+    rm -rf   "${vp_project_rootpath}input_output/logs/";
+fi;
+mkdir -p "${vp_project_rootpath}input_output/logs/";
+touch    "${vp_project_rootpath}input_output/logs/console_${vf_local_hostname_short}.log";
+};

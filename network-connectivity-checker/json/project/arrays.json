@@ -1,0 +1,126 @@
+{
+    "arrays":{
+        "description":                      "These are all the arrays required by the project before it is called.",
+        "instructions":                     "Add section under either index or keypair. Only the name is required but other info will speed up development!",
+        "index": {
+            "description":                  "The 'name' of arrays in this section are prepended with 'a_' (simple / index arrays)",
+            "array1":{ 
+                "name":                     "source_servers",
+                "rationale":                "Unique list of source servers.", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "a_source_servers( tcsmsc-ref12 tcsmsc-ref11 tcsmsc-ref13 )"
+            },
+            "array2":{ 
+                "name":                     "source_servers_sorted",
+                "rationale":                "Unique + sorted list of source servers used for displaying tests.", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "a_source_servers_sorted( tcsmsc-ref11 tcsmsc-ref12 tcsmsc-ref13 )"
+            }
+        },
+        "keypair": {
+            "description":                  "The name of arrays in this section are prepended with 'A_' (associative / keypair arrays)",
+            "array1":{ 
+                "name":                     "variables_tests",
+                "rationale":                "The tests json file as key-value pairs.",   
+                "populated":                "fp_S1_json_inventory_tests",
+                "structure":                "A_variables_tests[vj_tests_group1_t1_from]={inventory_servers_prod1_service_default}"
+            },  
+            "array2":{   
+                "name":                     "variables_inventory",
+                "rationale":                "The inventory json file as key-value pairs.",         
+                "populated":                "fp_S1_json_inventory_tests",
+                "structure":                "A_variables_inventory[vj_inventory_servers_ref1_service_default_tcsmsc-ref11]=10.110.16.26" 
+            },
+            "array3":{ 
+                "name":                     "tests_fromto",
+                "rationale":                "Stores test info as a value against a key representation of its unique place in the test json file.",          
+                "populated":                "fp_S1_array_create_tests_fromto",
+                "structure":                "A_tests_fromto[from_g1_t2_p1_c1_e2]=${key_hostname},${domain},${pubIp},${interface},${gateway},${parent},${testcase_created},${testcase_test},${testcase_type},${testcase_direction},${testcase_cfilter}" 
+            },
+            "array4":{ 
+                "name":                     "tests_from",
+                "rationale":                "A list of all source servers used for subsequent looping, display messages and gaining a source server count.", 
+                "populated":                "fp_S1_array_create_tests_from",
+                "structure":                "A_tests_from[${source_hostname}${source_domain}]=${source_hostname},${source_domain}"
+            },
+            "array5":{  
+                "name":                     "tests_to",
+                "rationale":                "A list of all target servers used for subsequent looping, display messages and gaining a target server count.", 
+                "populated":                "fp_S1_array_create_tests_to",
+                "structure":                "A_tests_to[${target_hostname}${target_domain}]=${target_hostname},${target_domain}"
+            },
+            "array6":{ 
+                "name":                     "tests_from_only",
+                "rationale":                "", 
+                "populated":                "fp_S1_array_create_tests_from",
+                "structure":                "A_tests_from_only[${i}]=${A_tests_fromto[$i]}"
+            }, 
+            "array7":{
+                "name":                     "tests_to_only", 
+                "rationale":                "", 
+                "populated":                "fp_S1_array_create_tests_to",
+                "structure":                "A_tests_to_only[${i}]=${A_tests_fromto[$i]}"
+            },  
+            "array8":{ 
+                "name":                     "tests_to_all",
+                "rationale":                "", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "A_tests_to_all[${new_key}]=${A_tests_from_only[$i]},${A_tests_to_only[$j]}"
+            },     
+            "array9":{ 
+                "name":                     "tests_to_all_remote",
+                "rationale":                "", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "A_tests_to_all_remote[${new_key}]=${A_tests_from_only[$i]},${A_tests_to_only[$j]}"
+            }, 
+            "array10":{ 
+                "name":                     "tests_count_by_source",
+                "rationale":                "", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "A_tests_count_by_source[${source_hostname},${source_domain},${source_interface}]=$((tests_count_by_source+testcase_test_count))"
+            },
+            "array11":{ 
+                "name":                     "groups_testcases_count",
+                "rationale":                "Used for stats to display the number of targets for each source server.", 
+                "populated":                "fp_S1_display_tests_inventory_stats",
+                "structure":                "A_groups_testcases_count[Group${g}]=${testcases_count}"
+            },
+            "array12":{ 
+                "name":                     "source_servers",
+                "rationale":                "Unique list of source servers used for displaying tests.", 
+                "populated":                "fp_S1_array_create_tests_to_all",
+                "structure":                "A_source_servers[${source_hostname}]="
+            },
+            "array13":{ 
+                "name":                     "servers_tests",
+                "rationale":                "List of each test from each source server.", 
+                "populated":                "fp_S1_display_array_tests_to_all",
+                "structure":                "A_servers_tests[${i},${test_count_server_id},${unique_test_id},${test_count_server_id_value_new}]=${source_hostname},${source_domain},${source_interface},${target_hostname},${target_domain},${target_interface},${testcase_test}"
+            },
+            "array14":{ 
+                "name":                     "server_interface",
+                "rationale":                "Used to hold data on number of interface cards.", 
+                "populated":                "fp_S1_display_array_tests_to_all",
+                "structure":                "A_server_interface[${source_hostname},${source_interface}]=${test_count_per_interface_card}"
+            },
+            "array15":{ 
+                "name":                     "count_per_server",
+                "rationale":                "For displaying the count of tests per server.", 
+                "populated":                "fp_S2_display_array_tests_to_all",
+                "structure":                "A_count_per_server[$i]=${server_test_count}"
+            },
+            "array16":{ 
+                "name":                     "paths_local",
+                "rationale":                "For displaying the local paths for the project banner.", 
+                "populated":                "fp_S1_ui_banner",
+                "structure":                "A_paths_local[${shortflag},${longflag},${default},${type}]=${!project_var}"
+            },
+            "array17":{ 
+                "name":                     "paths_remote",
+                "rationale":                "For displaying the remote paths for the project banner.", 
+                "populated":                "fp_S1_ui_banner",
+                "structure":                "A_paths_local[${shortflag},${longflag},${default},${type}]=${!project_var}"
+            }
+        }
+    }
+}

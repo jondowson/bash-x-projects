@@ -1,0 +1,447 @@
+{
+    "tests":{
+        "name":                 "TC6000_PROD",
+        "description":          "Tests over all interfaces for TC6000 VMs in the production environment.",
+        "environment":          "prod",
+        "group1":{
+            "interface":        "eth0",
+            "description":      "The default interface.", 
+            "t1":{
+                "description":  "Virtual vRAMS USSD from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_v-rams_ussd}",
+                "test":         "tcp-12850",
+                "type":         "default_vrams_ussd",
+                "direction":    "out"  
+            },
+            "t2":{
+                "description":  "SIS MSISDN and subscription lookups for post or prepaid accounts from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_sis}",
+                "test":         "tcp-8180;tcp-8181",
+                "type":         "default_sis_ussd",
+                "direction":    "out"  
+            },
+            "t3":{
+                "description":  "SRS voucher reloads from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_srs}",
+                "test":         "tcp-8082",
+                "type":         "default_srs_ussd",
+                "direction":    "out"  
+            },
+            "t4":{
+                "description":  "Service VIP of cluster from each VM in same cluster.",
+                "from":         "{inventory_servers_prod1_service_default}{inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_vips_default_tcsmsc-srv1p}{inventory_services_swisscom_vips_default_tcsmsc-srv2p}",
+                "test":         "tcp-8086;tcp-8087;tcp-2222",
+                "type":         "default_colibri_soap_cluster_same",
+                "direction":    "in"  
+            },
+            "t5":{
+                "description":  "Service VIP of cluster from each VM in other cluster.",
+                "from":         "{inventory_servers_prod1_service_default}{inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_vips_default_tcsmsc-srv2p}{inventory_services_swisscom_vips_default_tcsmsc-srv1p}",
+                "test":         "tcp-8086;tcp-8087;tcp-2222",
+                "type":         "default_colibri_soap_cluster_other",
+                "direction":    "in"  
+            },
+            "t6":{
+                "description":  "SMPP from each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_prod1_service_default}{inventory_servers_prod2_service_default}",
+                "to":           "{inventory_servers_prod1_service_default}{inventory_servers_prod2_service_default}",
+                "test":         "tcp-6010;tcp-6012;tcp-6013;tcp-6014;tcp-6018",
+                "type":         "default_esme_mpro_cluster_same",
+                "direction":    "in"  
+            },
+            "t7":{
+                "description":  "DNS from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_dns}",
+                "test":         "tcp-53",
+                "type":         "default_dns",
+                "direction":    "out"  
+            },
+            "t8":{
+                "description":  "S3 storage config backup from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_apps_s3appcloud}",
+                "test":         "tcp-443",
+                "type":         "default_s3",
+                "direction":    "out" 
+            },
+            "t9":{
+                "description":  "MSC shipment company whitelist from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_pfs}",
+                "test":         "tcp-8080",
+                "type":         "default_msc",
+                "direction":    "out"  
+            },
+            "t10":{
+                "description":  "AMS file server from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_default,inventory_servers_prod2_service_default}",
+                "to":           "{inventory_services_swisscom_ams}",
+                "test":         "tcp-22",
+                "type":         "default_ams_cdr",
+                "direction":    "out"  
+            }
+        },
+        "group2":{
+            "interface":        "eth1",
+            "description":      "The omn interface.",
+            "t1":{
+                "description":  "Each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_prod1_service_omn}{inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_servers_prod1_service_omn}{inventory_servers_prod2_service_omn}",
+                "test":         "tcp-22",
+                "type":         "omn_cluster_same",
+                "direction":    "both"  
+            },
+            "t2":{
+                "description":  "Each VM to each other VM in the other cluster",
+                "from":         "{inventory_servers_prod1_service_omn}{inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_servers_prod2_service_omn}{inventory_servers_prod1_service_omn}",
+                "test":         "tcp-22",
+                "type":         "omn_cluster_other",
+                "direction":    "both"  
+            },
+            "t3":{
+                "description":  "Artifactory from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_omn,inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_services_swisscom_apps_artifactory,inventory_services_swisscom_apps_bin}",
+                "test":         "tcp-443",
+                "type":         "omn_artifactory",
+                "direction":    "out"
+            },
+            "t4":{
+                "description":  "Kudos-proxy server for image downloads from each VM in each cluster.",  
+                "from":         "{inventory_servers_prod1_service_omn,inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_servers_kp}",
+                "test":         "tcp-22",
+                "type":         "omn_kp",
+                "direction":    "out"
+            },
+            "t5":{
+                "description":  "OMN Gui vip from each VM in same cluster.",
+                "from":         "{inventory_servers_prod1_service_omn}{inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_services_swisscom_vips_omn_omn-ep1}{inventory_services_swisscom_vips_omn_omn-ep2}",
+                "test":         "tcp-8888",
+                "type":         "omn_gui_vip",
+                "direction":    "in"  
+            },
+            "t6":{
+                "description":  "Splunk from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_omn,inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_services_swisscom_apps_splunk}",
+                "test":         "tcp-8090",
+                "type":         "omn_splunk",
+                "direction":    "out"  
+            },
+            "t7":{
+                "description":  "NTP time service from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_omn,inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_services_swisscom_ntp}",
+                "test":         "ping",
+                "type":         "omn_ntp",
+                "direction":    "out"  
+            },
+            "t8":{
+                "description":  "OpenMind smart services node from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_omn,inventory_servers_prod2_service_omn}",
+                "to":           "{inventory_services_swisscom_smartcontrol}",
+                "test":         "tcp-22;tcp-22222",
+                "type":         "omn_smart",
+                "direction":    "out" 
+            }
+        }, 
+        "group3":{
+            "interface":        "eth2",
+            "description":      "Using the sigtran_css1 interface on each VM.",
+            "t1":{
+                "description":  "The VMs prod11 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod11}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep3,inventory_services_swisscom_stpb_stpb-ep3}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY" 
+            },
+            "t2":{
+                "description":  "The VMs prod12 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod12}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep1,inventory_services_swisscom_stpb_stpb-ep1}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t3":{
+                "description":  "The VMs prod13 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod13}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep7,inventory_services_swisscom_stpb_stpb-ep5}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t4":{
+                "description":  "The VMs prod14 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod14}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep3,inventory_services_swisscom_stpb_stpb-ep7}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t5":{
+                "description":  "The VMs prod15 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod15}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep1,inventory_services_swisscom_stpb_stpb-ep1}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            },
+            "t6":{
+                "description":  "The VMs prod16 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css1_tcsmsc-prod16}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep5,inventory_services_swisscom_stpb_stpb-ep3}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t7":{
+                "description":  "The VMs prod21 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod21}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep3,inventory_services_swisscom_stpb_stpb-ep3}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t8":{
+                "description":  "The VMs prod22 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod22}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep5,inventory_services_swisscom_stpb_stpb-ep5}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"
+            },
+            "t9":{
+                "description":  "The VMs prod23 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod23}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep7,inventory_services_swisscom_stpb_stpb-ep7}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t10":{
+                "description":  "The VMs prod24 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod24}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep3,inventory_services_swisscom_stpb_stpb-ep1}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY" 
+            },
+            "t11":{
+                "description":  "The VMs prod25 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod25}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep1,inventory_services_swisscom_stpb_stpb-ep5}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY" 
+            },
+            "t12":{
+                "description":  "The VMs prod26 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css1_tcsmsc-prod26}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep7,inventory_services_swisscom_stpb_stpb-ep3}",
+                "test":         "cping",
+                "type":         "sigtran_css1_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            }
+        },
+        "group4":{
+            "interface":        "eth3",
+            "description":      "Using the sigtran_css2 interface on each VM. Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+            "t1":{
+                "description":  "The VMs prod11 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod11}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep4,inventory_services_swisscom_stpb_stpb-ep4}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t2":{
+                "description":  "The VMs prod12 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod12}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep2,inventory_services_swisscom_stpb_stpb-ep2}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY" 
+            },
+            "t3":{
+                "description":  "The VMs prod13 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod13}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep8,inventory_services_swisscom_stpb_stpb-ep6}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t4":{
+                "description":  "The VMs prod14 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod14}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep4,inventory_services_swisscom_stpb_stpb-ep8}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t5":{
+                "description":  "The VMs prod15 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod15}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep2,inventory_services_swisscom_stpb_stpb-ep2}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            },
+            "t6":{
+                "description":  "The VMs prod16 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod1_service_sigtran_css2_tcsmsc-prod16}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep6,inventory_services_swisscom_stpb_stpb-ep4}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t7":{
+                "description":  "The VMs prod21 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod21}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep4,inventory_services_swisscom_stpb_stpb-ep4}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t8":{
+                "description":  "The VMs prod22 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod22}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep6,inventory_services_swisscom_stpb_stpb-ep6}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            },
+            "t9":{
+                "description":  "The VMs prod23 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod23}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep8,inventory_services_swisscom_stpb_stpb-ep8}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            },
+            "t10":{
+                "description":  "The VMs prod24 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod24}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep4,inventory_services_swisscom_stpb_stpb-ep2}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"  
+            },
+            "t11":{
+                "description":  "The VMs prod25 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod25}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep2,inventory_services_swisscom_stpb_stpb-ep6}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"
+            },
+            "t12":{
+                "description":  "The VMs prod26 to the correct stpa and stpb endpoints.Assigned by OMN in /home/omndocker/Node/config/net-ep.conf",
+                "from":         "{inventory_servers_prod2_service_sigtran_css2_tcsmsc-prod26}",
+                "to":           "{inventory_services_swisscom_stpa_stpa-ep8,inventory_services_swisscom_stpb_stpb-ep4}",
+                "test":         "cping",
+                "type":         "sigtran_css2_stp",
+                "direction":    "out",
+                "cfilter":      "GRUMPY"   
+            }
+        },
+        "group5":{
+            "interface":        "eth4",
+            "description":      "The internal interface.",
+            "t1":{
+                "description":  "Each VM to each other VM within the same cluster.",
+                "from":         "{inventory_servers_prod1_service_internal}{inventory_servers_prod2_service_internal}",
+                "to":           "{inventory_servers_prod1_service_internal}{inventory_servers_prod2_service_internal}",
+                "test":         "tcp-22",
+                "type":         "internal_ssh",
+                "direction":    "both"  
+            },
+            "t2":{
+                "description":  "Each VM to each other VM within the same cluster. Docker swarm network discovery rest api and rpc interface. This port only for target nodes with Leader or Reachable status.",
+                "from":         "{inventory_servers_prod1_service_internal}{inventory_servers_prod2_service_internal}",
+                "to":           "{inventory_servers_prod1_service_internal}{inventory_servers_prod2_service_internal}",
+                "test":         "tcp-7946;tcp-2375;tcp-2377",
+                "type":         "internal_docker_leader",
+                "direction":    "both"
+            }
+        },
+        "group6":{
+            "interface":        "eth5",
+            "description":      "The sip interface.",
+            "t1":{
+                "description":  "Sip virtual IMS s-scsf from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_sip,inventory_servers_prod2_service_sip}",
+                "to":           "{inventory_services_swisscom_s-cscf}",
+                "test":         "tcp-5060",
+                "type":         "sip_vims_scscf",
+                "direction":    "both"  
+            }
+        },
+        "group7":{
+            "interface":        "eth6",
+            "description":      "The legal interception (li) interface.",
+            "t1":{
+                "description":  "The LI service from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_li,inventory_servers_prod2_service_li}",
+                "to":           "{inventory_services_swisscom_li}",
+                "test":         "tcp-20593",
+                "type":         "li_sms_interception",
+                "direction":    "out"  
+            },
+            "t2":{
+                "description":  "The TC6000 LI service VIP is running on each cluster (Stod container). Test is skipped if oasis is master.",
+                "from":         "{inventory_servers_prod1_service_li}{inventory_servers_prod2_service_li}",
+                "to":           "{inventory_services_swisscom_vips_li_li-ep1}{inventory_services_swisscom_vips_li_li-ep2}",
+                "test":         "tcp-8090",
+                "type":         "li_provisioning",
+                "direction":    "in"  
+            }
+        },
+        "group8":{
+            "interface":        "eth7",
+            "description":      "The gy interface.",
+            "t1":{
+                "description":  "vRAMS realtime for charging from each VM in each cluster.",
+                "from":         "{inventory_servers_prod1_service_gy,inventory_servers_prod2_service_gy}",
+                "to":           "{inventory_services_swisscom_v-rams_realtime}",
+                "test":         "tcp-12615;tcp-12611",
+                "type":         "gy_vrams",
+                "direction":    "out"  
+            }
+        }              
+    }
+}
