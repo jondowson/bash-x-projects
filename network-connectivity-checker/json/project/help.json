@@ -25,7 +25,7 @@
                 "shortflag":    "i",
                 "type":         "path_file_local",
                 "about":        "Json framework path.",
-                "default":      "~/Workspace/eigental/bash-x-inventory/TC6000/ref/inventory.json"
+                "default":      "~/Workspace/github/bash-x-inventory/TC6000/ref/inventory.json"
             },
             "loglifemins":{
                 "shortflag":    "llm",
